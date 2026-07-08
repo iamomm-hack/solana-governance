@@ -120,4 +120,6 @@ pub enum GovernanceError {
     InvalidBallotBox,
     #[msg("Snapshot slot must be in the future (greater than the current slot)")]
     SnapshotSlotNotInFuture,
+    #[msg("Proposal has no supporters to retally")]
+    NoSupporters,
 }

@@ -105,6 +105,13 @@ pub mod svmgov_program {
         Ok(())
     }
 
+    /// Permissionless re-tally of a proposal's support at the current epoch.
+    /// Activates voting if the re-measured support now meets the threshold.
+    pub fn retally_support(ctx: Context<RetallySupport>) -> Result<()> {
+        ctx.accounts.retally_support()?;
+        Ok(())
+    }
+
     pub fn cast_vote(
         ctx: Context<CastVote>,
         for_votes_bp: u64,
