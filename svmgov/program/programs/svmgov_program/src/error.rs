@@ -122,4 +122,8 @@ pub enum GovernanceError {
     SnapshotSlotNotInFuture,
     #[msg("Proposal has no supporters to retally")]
     NoSupporters,
+    #[msg("Proposal has reached the maximum number of supporters")]
+    SupporterLimitReached,
+    #[msg("Invalid max supporters (must be greater than 0 and less than or equal to the supporter limit)")]
+    InvalidMaxSupporters,
 }

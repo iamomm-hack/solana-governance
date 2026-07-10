@@ -4,7 +4,7 @@ use crate::{
     error::GovernanceError,
     instructions::{
         validate_cluster_support_pct_min_bps, validate_max_description_length,
-        validate_max_title_length,
+        validate_max_supporters, validate_max_title_length,
     },
     state::GlobalConfig,
 };
@@ -35,6 +35,7 @@ impl<'info> UpdateConfig<'info> {
         voting_epochs: Option<u64>,
         snapshot_epoch_extension: Option<u64>,
         snapshot_slot_offset: Option<i64>,
+        max_supporters: Option<u32>,
     ) -> Result<()> {
         let config = &mut self.global_config;
 
@@ -67,6 +68,10 @@ impl<'info> UpdateConfig<'info> {
         }
         if let Some(v) = snapshot_slot_offset {
             config.snapshot_slot_offset = v;
+        }
+        if let Some(v) = max_supporters {
+            validate_max_supporters(v)?;
+            config.max_supporters = v;
         }
 
         Ok(())

@@ -98,6 +98,15 @@ impl<'info> SupportProposal<'info> {
             self.global_config.max_support_epochs,
         )?;
 
+        // Cap the supporter count. Every support/retally re-measures the whole
+        // list in a single transaction, so an unbounded list would eventually
+        // exceed Solana's heap/compute limits and brick the proposal. Checked
+        // before the new entry is recorded so the list never exceeds the cap.
+        require!(
+            (self.proposal.supporters.len() as u64) < self.global_config.max_supporters as u64,
+            GovernanceError::SupporterLimitReached
+        );
+
         // Ensure signer is the node identity of the vote account, so a supporter
         // can only pledge stake from a vote account they operate.
         let vote_account_data = self.spl_vote_account.data.borrow();
@@ -126,6 +135,14 @@ impl<'info> SupportProposal<'info> {
             get_epoch_stake_for_vote_account(pk)
         })?;
         let supporter_stake = get_epoch_stake_for_vote_account(self.spl_vote_account.key);
+        // A supporter must clear the same stake floor as a proposal author.
+        // This blocks a zero-/dust-stake spam attack that would otherwise let
+        // an attacker cheaply fill the supporters list to the cap (or drive up
+        // re-tally cost) without contributing meaningful stake.
+        require!(
+            supporter_stake >= self.global_config.min_proposal_stake_lamports,
+            GovernanceError::NotEnoughStake
+        );
         let new_support_stake = prior_stake
             .checked_add(supporter_stake)
             .ok_or(GovernanceError::ArithmeticOverflow)?;

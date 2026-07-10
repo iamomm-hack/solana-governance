@@ -27,6 +27,12 @@ pub struct GlobalConfig {
     pub snapshot_epoch_extension: u64,
     /// Slot offset from epoch start for snapshot computation (can be negative)
     pub snapshot_slot_offset: i64,
+    /// Maximum number of validators that may support a single proposal. Bounds
+    /// the per-transaction cost of re-tallying the `supporters` list (which is
+    /// deserialized and re-measured in full on every support/retally) so a
+    /// proposal can always be processed within Solana's heap/compute limits.
+    /// Must be in `1..=MAX_SUPPORTERS_LIMIT`.
+    pub max_supporters: u32,
     /// PDA bump seed
     pub bump: u8,
 }
