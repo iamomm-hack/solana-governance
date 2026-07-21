@@ -9,8 +9,6 @@ pub const MAX_DESC_ACCOUNT_SIZE: usize = 500;
 
 // Hard upper bound on the admin-configurable `max_supporters` cap. Every support
 // call must deserialize and re-tally the whole `supporters` list in a single
-// transaction; the binding limit is the 256KB max requestable heap frame, which
-// is exhausted somewhere around 2,500-3,000 supporters. This ceiling keeps even
-// the largest configurable value comfortably below that, while still exceeding
-// the count of active mainnet validators (~1,300-1,500).
+// transaction; 2000 staked validators is now the maximum after SIMD-0357:
+// Alpenglow VAT implementation has been activated on all clusters.
 pub const MAX_SUPPORTERS_LIMIT: u32 = 2_000;
