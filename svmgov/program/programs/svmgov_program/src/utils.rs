@@ -13,19 +13,19 @@ use anchor_lang::prelude::Pubkey;
 ///
 /// # Example
 ///
-/// ```rust
-/// let validator_stake = 40_001u64;
-/// let cluster_stake = 380_000_000u64;
-/// let weight_bp = stake_weight_bp!(validator_stake, cluster_stake)?;
-/// // Returns approximately 1 bp
+/// ```
+/// use svmgov_program::stake_weight_bp;
+///
+/// let weight_bp = stake_weight_bp!(40_001u64, 380_000_000u64).unwrap();
+/// assert_eq!(weight_bp, 1);
 /// ```
 #[macro_export]
 macro_rules! stake_weight_bp {
     ($validator_stake:expr, $cluster_stake:expr) => {{
         ($validator_stake as u128)
-            .checked_mul($crate::constants::BASIS_POINTS_MAX as u128)
+            .checked_mul($crate::BASIS_POINTS_MAX as u128)
             .and_then(|product| product.checked_div($cluster_stake as u128))
-            .ok_or($crate::error::GovernanceError::ArithmeticOverflow)
+            .ok_or($crate::GovernanceError::ArithmeticOverflow)
             .map(|result| result as u64)
     }};
 }
@@ -43,19 +43,19 @@ macro_rules! stake_weight_bp {
 ///
 /// # Example
 ///
-/// ```rust
-/// let stake = 1_000_000u64; // 1 SOL in lamports
-/// let basis_points = 2_500u64; // 25% of stake
-/// let vote_lamports = calculate_vote_lamports!(stake, basis_points)?;
-/// // Returns 250,000 lamports (25% of 1 SOL)
+/// ```
+/// use svmgov_program::calculate_vote_lamports;
+///
+/// let vote_lamports = calculate_vote_lamports!(1_000_000u64, 2_500u64).unwrap();
+/// assert_eq!(vote_lamports, 250_000); // 25% of 1 SOL
 /// ```
 #[macro_export]
 macro_rules! calculate_vote_lamports {
     ($stake:expr, $basis_points:expr) => {{
         ($stake as u128)
             .checked_mul($basis_points as u128)
-            .and_then(|product| product.checked_div($crate::constants::BASIS_POINTS_MAX as u128))
-            .ok_or($crate::error::GovernanceError::ArithmeticOverflow)
+            .and_then(|product| product.checked_div($crate::BASIS_POINTS_MAX as u128))
+            .ok_or($crate::GovernanceError::ArithmeticOverflow)
             .map(|result| result as u64)
     }};
 }
@@ -144,12 +144,11 @@ pub fn is_valid_github_link(link: &str) -> bool {
 ///
 /// # Example
 ///
-/// ```rust
-/// let (start, end) = get_epoch_slot_range(0);
-/// // Returns (0, 431999)
+/// ```
+/// use svmgov_program::get_epoch_slot_range;
 ///
-/// let (start, end) = get_epoch_slot_range(1);
-/// // Returns (432000, 863999)
+/// assert_eq!(get_epoch_slot_range(0), (0, 431_999));
+/// assert_eq!(get_epoch_slot_range(1), (432_000, 863_999));
 /// ```
 pub fn get_epoch_slot_range(epoch: u64) -> (u64, u64) {
     const SLOTS_PER_EPOCH: u64 = 432_000;
@@ -383,8 +382,20 @@ mod tests {
         let b = Pubkey::new_unique();
         let supporters = [a, b];
 
-        let epoch_n = |pk: &Pubkey| -> u64 { if *pk == a { 500 } else { 300 } };
-        let epoch_n_plus_2 = |pk: &Pubkey| -> u64 { if *pk == a { 50 } else { 300 } };
+        let epoch_n = |pk: &Pubkey| -> u64 {
+            if *pk == a {
+                500
+            } else {
+                300
+            }
+        };
+        let epoch_n_plus_2 = |pk: &Pubkey| -> u64 {
+            if *pk == a {
+                50
+            } else {
+                300
+            }
+        };
 
         assert_eq!(tally_supporter_stakes(&supporters, epoch_n).unwrap(), 800);
         assert_eq!(
