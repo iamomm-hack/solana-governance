@@ -1713,8 +1713,9 @@ dependencies = [
 
 [[package]]
 name = "litesvm"
-version = "0.14.0"
-source = "git+https://github.com/cavemanloverboy/litesvm?branch=feat%2Fconfigurable-epoch-stake#16e6bcfef9ad3cfb0c28901a708ab6674143a2e5"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e5c571b8f010af084d125c8968e52658eb2c5d146a0a8254681adcdac36caa3e"
 dependencies = [
  "agave-feature-set",
  "agave-reserved-account-keys",

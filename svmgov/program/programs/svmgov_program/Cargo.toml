@@ -21,13 +21,13 @@ ncn-snapshot = { path = "../../../../ncn/programs/ncn-snapshot", features = ["cp
 solana-vote-interface = { version = "=5.0.0", default-features = false, features = ["bincode"] }
 
 [dev-dependencies]
-# Keep versions aligned with cavemanloverboy/litesvm (feat/configurable-epoch-stake).
+# Keep versions aligned with litesvm 0.15 (sol_get_epoch_stake configuration).
 bincode = "1.3"
 borsh = "1.5"
 # Force five8 → five8_core 1.x so DecodeError implements core::error::Error
 # (five8 1.0 accepts 0.1, which breaks solana-keypair against solana-signature 3.4).
 five8_core = "1.0"
-litesvm = { git = "https://github.com/cavemanloverboy/litesvm", branch = "feat/configurable-epoch-stake" }
+litesvm = "0.15.0"
 sha2 = "0.10"
 solana-account = "4.3.0"
 solana-address = ">=2.2, <3"
