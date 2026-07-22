@@ -617,6 +617,43 @@ fn support_proposal_remeasures_prior_stake_across_epochs() {
     assert_eq!(after.snapshot_slot, expected_snapshot_slot(crossing_epoch));
 }
 
+/// Once voting is active, both `support_proposal` and `retally_support` return
+/// `ProposalClosed`.
+#[test_log::test]
+fn support_and_retally_reject_after_voting_activated() {
+    const CREATION_EPOCH: u64 = 10;
+    const UNDER_THRESHOLD: usize = SUPPORTER_COUNT - 1;
+    let mut h = setup_harness(CREATION_EPOCH);
+    let ballot_box = seed_ballot_box(&mut h.svm, expected_snapshot_slot(CREATION_EPOCH));
+    let proposal = create_proposal(&mut h, 97, "closed after voting");
+
+    for i in 0..UNDER_THRESHOLD {
+        support_one(&mut h, proposal, i, ballot_box);
+    }
+    // Cross threshold via stake drift + retally (leaves validator UNDER_THRESHOLD free).
+    h.svm
+        .set_epoch_stake(h.validators[0].vote.pubkey(), 2 * STAKE_PER_VALIDATOR)
+        .unwrap();
+    h.svm
+        .set_epoch_stake(h.validators[VALIDATOR_COUNT - 1].vote.pubkey(), 0)
+        .unwrap();
+    retally_one(&mut h, proposal, UNDER_THRESHOLD, ballot_box);
+    assert!(fetch_proposal(&h.svm, &proposal).voting);
+
+    let closed = TransactionError::InstructionError(
+        1,
+        anchor_custom_error(GovernanceError::ProposalClosed),
+    );
+    let support_err = try_support_one(&mut h, proposal, UNDER_THRESHOLD, ballot_box)
+        .expect_err("support after voting should fail");
+    assert_eq!(support_err.err, closed);
+
+    // Different caller than the activating retally (avoid LiteSVM AlreadyProcessed).
+    let retally_err = try_retally_one(&mut h, proposal, 1, ballot_box)
+        .expect_err("retally after voting should fail");
+    assert_eq!(retally_err.err, closed);
+}
+
 /// Retally is rejected once the clock moves past the support window
 /// (same inclusive bound as `support_proposal`).
 #[test_log::test]
