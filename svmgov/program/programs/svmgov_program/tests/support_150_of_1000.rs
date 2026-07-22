@@ -566,6 +566,46 @@ fn retally_support_activates_voting_after_stake_drift() {
     assert_eq!(after.start_epoch, crossing_epoch + DISCUSSION_EPOCHS + 1);
 }
 
+/// `support_proposal` re-measures prior supporters at the current epoch before
+/// adding the newcomer — so stake drift on an earlier supporter can be what
+/// pushes the tally over the threshold (without `retally_support`).
+#[test_log::test]
+fn support_proposal_remeasures_prior_stake_across_epochs() {
+    const CREATION_EPOCH: u64 = 10;
+    // 148 @ 1 SOL; after +1 SOL drift on one prior, a 149th support remeasures
+    // to 149 + 1 = 150. Stale (support-time) weights would only reach 149.
+    const PRIOR: usize = SUPPORTER_COUNT - 2;
+    let mut h = setup_harness(CREATION_EPOCH);
+    let early_ballot = seed_ballot_box(&mut h.svm, expected_snapshot_slot(CREATION_EPOCH));
+    let proposal = create_proposal(&mut h, 98, "remeasure on support");
+
+    for i in 0..PRIOR {
+        support_one(&mut h, proposal, i, early_ballot);
+    }
+    assert!(!fetch_proposal(&h.svm, &proposal).voting);
+
+    h.svm
+        .set_epoch_stake(h.validators[0].vote.pubkey(), 2 * STAKE_PER_VALIDATOR)
+        .unwrap();
+    h.svm
+        .set_epoch_stake(h.validators[VALIDATOR_COUNT - 1].vote.pubkey(), 0)
+        .unwrap();
+
+    let crossing_epoch = CREATION_EPOCH + 1;
+    set_clock(&mut h.svm, crossing_epoch);
+    let ballot_box = seed_ballot_box(&mut h.svm, expected_snapshot_slot(crossing_epoch));
+    support_one(&mut h, proposal, PRIOR, ballot_box);
+
+    let after = fetch_proposal(&h.svm, &proposal);
+    assert_eq!(after.supporters.len(), PRIOR + 1);
+    assert_eq!(
+        after.cluster_support_lamports,
+        STAKE_PER_VALIDATOR * (PRIOR as u64 + 2) // 148 + boost + newcomer
+    );
+    assert!(after.voting);
+    assert_eq!(after.snapshot_slot, expected_snapshot_slot(crossing_epoch));
+}
+
 /// Support is rejected once the clock moves past
 /// `creation_epoch + max_support_epochs` (inclusive window end).
 #[test_log::test]
