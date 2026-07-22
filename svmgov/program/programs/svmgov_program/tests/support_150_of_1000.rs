@@ -472,9 +472,14 @@ fn support_one(h: &mut Harness, proposal: Address, validator_idx: usize, ballot_
     });
 }
 
-fn retally_one(h: &mut Harness, proposal: Address, caller_idx: usize, ballot_box: Address) {
+fn try_retally_one(
+    h: &mut Harness,
+    proposal: Address,
+    caller_idx: usize,
+    ballot_box: Address,
+) -> Result<litesvm::types::TransactionMetadata, litesvm::types::FailedTransactionMetadata> {
     let caller = h.validators[caller_idx].identity.insecure_clone();
-    send_ix(
+    try_send_ix(
         &mut h.svm,
         &caller,
         &[
@@ -487,7 +492,13 @@ fn retally_one(h: &mut Harness, proposal: Address, caller_idx: usize, ballot_box
                 h.global_config,
             ),
         ],
-    );
+    )
+}
+
+fn retally_one(h: &mut Harness, proposal: Address, caller_idx: usize, ballot_box: Address) {
+    try_retally_one(h, proposal, caller_idx, ballot_box).unwrap_or_else(|e| {
+        panic!("retally failed: {:#?}\nlogs: {:#?}", e.err, e.meta.logs);
+    });
 }
 
 fn assert_threshold_reached(proposal: &ProposalAccount, crossing_epoch: u64) {
@@ -604,6 +615,38 @@ fn support_proposal_remeasures_prior_stake_across_epochs() {
     );
     assert!(after.voting);
     assert_eq!(after.snapshot_slot, expected_snapshot_slot(crossing_epoch));
+}
+
+/// Retally is rejected once the clock moves past the support window
+/// (same inclusive bound as `support_proposal`).
+#[test_log::test]
+fn retally_support_rejects_after_support_window() {
+    const CREATION_EPOCH: u64 = 10;
+    let mut h = setup_harness(CREATION_EPOCH);
+    let ballot_box = seed_ballot_box(&mut h.svm, expected_snapshot_slot(CREATION_EPOCH));
+    let proposal = create_proposal(&mut h, 8, "expired retally window");
+
+    // Need ≥1 supporter so the failure is the window check, not NoSupporters.
+    support_one(&mut h, proposal, 0, ballot_box);
+
+    // Last inclusive epoch still allows retally.
+    set_clock(&mut h.svm, CREATION_EPOCH + MAX_SUPPORT_EPOCHS);
+    retally_one(&mut h, proposal, 1, ballot_box);
+    assert!(!fetch_proposal(&h.svm, &proposal).voting);
+
+    // One epoch past the window end → SupportPeriodExpired.
+    // Different caller so LiteSVM does not treat this as a duplicate tx.
+    set_clock(&mut h.svm, CREATION_EPOCH + MAX_SUPPORT_EPOCHS + 1);
+    let err = try_retally_one(&mut h, proposal, 2, ballot_box)
+        .expect_err("retally after window end should fail");
+    assert_eq!(
+        err.err,
+        TransactionError::InstructionError(
+            1,
+            anchor_custom_error(GovernanceError::SupportPeriodExpired),
+        )
+    );
+    assert!(!fetch_proposal(&h.svm, &proposal).voting);
 }
 
 /// Support is rejected once the clock moves past
