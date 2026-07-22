@@ -240,6 +240,28 @@ fn support_proposal_ix(
     }
 }
 
+fn retally_support_ix(
+    caller: &Address,
+    proposal: Address,
+    ballot_box: Address,
+    program_config: Address,
+    global_config: Address,
+) -> Instruction {
+    Instruction {
+        program_id: SVMGOV_PROGRAM_ID,
+        accounts: vec![
+            AccountMeta::new(*caller, true),
+            AccountMeta::new(proposal, false),
+            AccountMeta::new(ballot_box, false),
+            AccountMeta::new_readonly(NCN_SNAPSHOT_PROGRAM_ID, false),
+            AccountMeta::new_readonly(program_config, false),
+            AccountMeta::new_readonly(global_config, false),
+            AccountMeta::new_readonly(system_program::ID, false),
+        ],
+        data: anchor_discriminator("global", "retally_support").to_vec(),
+    }
+}
+
 fn fetch_proposal(svm: &LiteSVM, proposal: &Address) -> ProposalAccount {
     let account = svm.get_account(proposal).expect("proposal account");
     assert!(account.data.len() > 8, "proposal too small");
@@ -450,6 +472,24 @@ fn support_one(h: &mut Harness, proposal: Address, validator_idx: usize, ballot_
     });
 }
 
+fn retally_one(h: &mut Harness, proposal: Address, caller_idx: usize, ballot_box: Address) {
+    let caller = h.validators[caller_idx].identity.insecure_clone();
+    send_ix(
+        &mut h.svm,
+        &caller,
+        &[
+            ComputeBudgetInstruction::set_compute_unit_limit(1_400_000),
+            retally_support_ix(
+                &caller.pubkey(),
+                proposal,
+                ballot_box,
+                h.program_config,
+                h.global_config,
+            ),
+        ],
+    );
+}
+
 fn assert_threshold_reached(proposal: &ProposalAccount, crossing_epoch: u64) {
     let expected_support = STAKE_PER_VALIDATOR * SUPPORTER_COUNT as u64;
     let cluster = STAKE_PER_VALIDATOR * VALIDATOR_COUNT as u64;
@@ -461,6 +501,69 @@ fn assert_threshold_reached(proposal: &ProposalAccount, crossing_epoch: u64) {
         proposal.snapshot_slot,
         expected_snapshot_slot(crossing_epoch)
     );
+}
+
+/// Stake drift alone (no new supporter) can activate voting via `retally_support`.
+///
+/// 149 supporters leave the proposal under the 15% threshold; after one of those
+/// supporters' epoch stake grows, a permissionless retally re-measures and flips
+/// `voting` without another `support_proposal`.
+#[test_log::test]
+fn retally_support_activates_voting_after_stake_drift() {
+    const CREATION_EPOCH: u64 = 10;
+    const UNDER_THRESHOLD: usize = SUPPORTER_COUNT - 1; // 149 / 1000 = 14.9%
+    let mut h = setup_harness(CREATION_EPOCH);
+
+    // Placeholder ballot box for the under-threshold supports (activation skipped).
+    let early_ballot = seed_ballot_box(&mut h.svm, expected_snapshot_slot(CREATION_EPOCH));
+    let proposal = create_proposal(&mut h, 99, "retally after stake drift");
+
+    for i in 0..UNDER_THRESHOLD {
+        support_one(&mut h, proposal, i, early_ballot);
+    }
+
+    let before = fetch_proposal(&h.svm, &proposal);
+    assert_eq!(before.supporters.len(), UNDER_THRESHOLD);
+    assert_eq!(
+        before.cluster_support_lamports,
+        STAKE_PER_VALIDATOR * UNDER_THRESHOLD as u64
+    );
+    assert!(!before.voting);
+
+    // Drift: +1 SOL on an existing supporter, −1 SOL on a non-supporter so the
+    // cluster total stays 1000 SOL (threshold remains exactly 150 SOL). Bumping
+    // without a matching decrease would lift the lamport threshold above 150 SOL
+    // (1001e9 * 1500 / 10_000 = 150.15 SOL) and leave 150 SOL still short.
+    let boosted = h.validators[0].vote.pubkey();
+    let non_supporter = h.validators[VALIDATOR_COUNT - 1].vote.pubkey();
+    h.svm
+        .set_epoch_stake(boosted, 2 * STAKE_PER_VALIDATOR)
+        .unwrap();
+    h.svm.set_epoch_stake(non_supporter, 0).unwrap();
+    assert_eq!(
+        h.svm.epoch_total_stake(),
+        STAKE_PER_VALIDATOR * VALIDATOR_COUNT as u64
+    );
+
+    // Retally in a later epoch inside the window (re-measure at current stake).
+    let crossing_epoch = CREATION_EPOCH + 1;
+    set_clock(&mut h.svm, crossing_epoch);
+    let ballot_box = seed_ballot_box(&mut h.svm, expected_snapshot_slot(crossing_epoch));
+    // Permissionless: any signer may call (use a non-supporter identity).
+    retally_one(&mut h, proposal, UNDER_THRESHOLD, ballot_box);
+
+    let after = fetch_proposal(&h.svm, &proposal);
+    assert_eq!(after.supporters.len(), UNDER_THRESHOLD);
+    assert_eq!(
+        after.cluster_support_lamports,
+        STAKE_PER_VALIDATOR * UNDER_THRESHOLD as u64 + STAKE_PER_VALIDATOR
+    );
+    assert!(
+        after.voting,
+        "retally should activate voting after stake drift"
+    );
+    assert_eq!(after.snapshot_slot, expected_snapshot_slot(crossing_epoch));
+    assert_eq!(after.start_epoch, crossing_epoch + DISCUSSION_EPOCHS + 1);
 }
 
 /// Support is rejected once the clock moves past
