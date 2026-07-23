@@ -1308,6 +1308,7 @@
       "accounts": [
         {
           "name": "admin",
+          "writable": true,
           "signer": true
         },
         {
@@ -1335,6 +1336,10 @@
               }
             ]
           }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
@@ -2051,22 +2056,21 @@
             "type": "i64"
           },
           {
-            "name": "max_supporters",
-            "docs": [
-              "Maximum number of validators that may support a single proposal. Bounds",
-              "the per-transaction cost of re-tallying the `supporters` list (which is",
-              "deserialized and re-measured in full on every support/retally) so a",
-              "proposal can always be processed within Solana's heap/compute limits.",
-              "Must be in `1..=MAX_SUPPORTERS_LIMIT`."
-            ],
-            "type": "u32"
-          },
-          {
             "name": "bump",
             "docs": [
               "PDA bump seed"
             ],
             "type": "u8"
+          },
+          {
+            "name": "max_supporters",
+            "docs": [
+              "Maximum number of validators that may support a single proposal. Bounds",
+              "the per-transaction cost of re-tallying the `supporters` list so a",
+              "proposal can always be processed within Solana's heap/compute limits.",
+              "Must be in `1..=MAX_SUPPORTERS_LIMIT`."
+            ],
+            "type": "u32"
           }
         ]
       }

@@ -77,6 +77,7 @@ struct GlobalConfigAccount {
     snapshot_epoch_extension: u64,
     snapshot_slot_offset: i64,
     bump: u8,
+    max_supporters: u32,
 }
 
 #[derive(BorshSerialize)]
@@ -334,6 +335,7 @@ fn setup_harness(creation_epoch: u64) -> Harness {
             snapshot_epoch_extension: 0,
             snapshot_slot_offset: 0,
             bump: global_bump,
+            max_supporters: 2000,
         },
     );
     write_anchor_account(

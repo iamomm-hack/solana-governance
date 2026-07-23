@@ -227,6 +227,7 @@ pub async fn update_global_config(
         .accounts(accounts::UpdateConfig {
             admin,
             global_config: global_config_pda,
+            system_program: system_program::ID,
         })
         .instructions()?;
 
