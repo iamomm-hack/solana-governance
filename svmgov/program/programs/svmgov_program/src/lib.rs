@@ -9,6 +9,10 @@ mod utils;
 use anchor_lang::prelude::*;
 use instructions::*;
 
+pub use constants::BASIS_POINTS_MAX;
+pub use error::GovernanceError;
+pub use utils::get_epoch_slot_range;
+
 use ncn_snapshot::StakeMerkleLeaf;
 
 declare_id!("govYkyQ3ePtGULAtY6V75qjWE8UH4vCUVQ1W4HdCAZU");
