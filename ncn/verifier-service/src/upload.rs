@@ -168,11 +168,11 @@ fn validate_snapshot(snapshot: &MetaMerkleSnapshot) -> Result<()> {
             if stake_accs.contains(&leaf.stake_account) {
                 return Err(anyhow::anyhow!(
                     "duplicated stake account {}",
-                    bundle.meta_merkle_leaf.vote_account
+                    leaf.stake_account
                 ));
             }
             stake_accs.insert(leaf.stake_account);
-            sum_stake = sum_stake + leaf.active_stake;
+            sum_stake = sum_stake.saturating_add(leaf.active_stake);
         }
 
         if sum_stake != bundle.meta_merkle_leaf.active_stake {
