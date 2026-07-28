@@ -172,7 +172,12 @@ fn validate_snapshot(snapshot: &MetaMerkleSnapshot) -> Result<()> {
                 ));
             }
             stake_accs.insert(leaf.stake_account);
-            sum_stake = sum_stake.saturating_add(leaf.active_stake);
+            sum_stake = sum_stake
+                .checked_add(leaf.active_stake)
+                .ok_or(anyhow::anyhow!(
+                    "overflow of stake sum in leaves for bundle {}",
+                    bundle.meta_merkle_leaf.vote_account
+                ))?;
         }
 
         if sum_stake != bundle.meta_merkle_leaf.active_stake {
