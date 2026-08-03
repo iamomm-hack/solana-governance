@@ -60,9 +60,9 @@ export default function LifecycleIndicator({
   const activeIndex = isFailed ? 0 : Math.max(STAGE_ORDER.indexOf(status), 0);
 
   const governanceConfigQuery = useGovernanceConfigContext();
-  const thresholdPercent = governanceConfigQuery.data
-    ? supportThresholdPercentFromConfig(governanceConfigQuery.data)
-    : undefined;
+  const thresholdPercent = supportThresholdPercentFromConfig(
+    governanceConfigQuery.data,
+  );
 
   const label = isFailed ? FAILED_LABEL : STAGE_LABEL[status];
   const description = isFailed

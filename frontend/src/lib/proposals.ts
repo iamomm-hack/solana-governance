@@ -21,25 +21,25 @@ export function epochConstantsFromGovernanceConfig(
   };
 }
 
+/**
+ * Fallback support threshold while the on-chain config is loading (or failed
+ * to load). Matches the current mainnet GlobalConfig value; the real value is
+ * always preferred once fetched.
+ */
+export const DEFAULT_SUPPORT_THRESHOLD_PERCENT = 15;
+
 /** Support threshold as a percentage (e.g. 15 for 15%), from the on-chain GlobalConfig. */
 export function supportThresholdPercentFromConfig(
-  dto: GovernanceConfigDto,
+  dto: GovernanceConfigDto | undefined,
 ): number {
-  return dto.clusterSupportPctMinBps / 100;
+  return dto
+    ? dto.clusterSupportPctMinBps / 100
+    : DEFAULT_SUPPORT_THRESHOLD_PERCENT;
 }
 
-/**
- * Shared copy for the support-phase requirement. Pass undefined while the
- * on-chain config is still loading.
- */
-export function supportPhaseRequirementCopy(
-  thresholdPercent: number | undefined,
-): string {
-  const pct =
-    thresholdPercent !== undefined
-      ? `${thresholdPercent}%`
-      : "a minimum percentage";
-  return `The support phase requires ${pct} of total validator stake expressing support for the proposal before it can move on to discussion and voting phase`;
+/** Shared copy for the support-phase requirement. */
+export function supportPhaseRequirementCopy(thresholdPercent: number): string {
+  return `The support phase requires ${thresholdPercent}% of total validator stake expressing support for the proposal before it can move on to discussion and voting phase`;
 }
 
 export interface GetProposalStatusParams {

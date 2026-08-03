@@ -63,9 +63,9 @@ export default function SupportProposalSection({
   const disabledButtons = disabled || isLoading;
 
   const governanceConfigQuery = useGovernanceConfigContext();
-  const thresholdPercent = governanceConfigQuery.data
-    ? supportThresholdPercentFromConfig(governanceConfigQuery.data)
-    : undefined;
+  const thresholdPercent = supportThresholdPercentFromConfig(
+    governanceConfigQuery.data,
+  );
   const message =
     variant === "support"
       ? supportPhaseRequirementCopy(thresholdPercent)

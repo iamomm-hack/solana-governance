@@ -83,11 +83,9 @@ export function SupportPhaseProgress({ proposal }: SupportPhaseProgressProps) {
     // Use proposal's clusterSupportLamports as current support
     const currentSupportLamports = proposal.clusterSupportLamports;
     const totalStakedLamports = validatorsStake;
-    // Support threshold comes from the on-chain GlobalConfig; 0 until loaded
-    // (the isLoading gate above hides values until the config arrives).
-    const thresholdPercent = configData
-      ? supportThresholdPercentFromConfig(configData)
-      : 0;
+    // Support threshold comes from the on-chain GlobalConfig; falls back to
+    // the current mainnet default until the config loads.
+    const thresholdPercent = supportThresholdPercentFromConfig(configData);
 
     // Calculate required threshold in lamports
     const requiredThresholdLamports =
