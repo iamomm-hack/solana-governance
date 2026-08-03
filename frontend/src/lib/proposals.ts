@@ -1,4 +1,3 @@
-import { SUPPORT_THRESHOLD_PERCENT } from "@/components/proposals/detail/support-phase-progress";
 import type { GovernanceConfigDto } from "@/lib/getGovernanceConfig";
 import type { ProposalStatus } from "@/types";
 import { PublicKey } from "@solana/web3.js";
@@ -22,6 +21,27 @@ export function epochConstantsFromGovernanceConfig(
   };
 }
 
+/** Support threshold as a percentage (e.g. 15 for 15%), from the on-chain GlobalConfig. */
+export function supportThresholdPercentFromConfig(
+  dto: GovernanceConfigDto,
+): number {
+  return dto.clusterSupportPctMinBps / 100;
+}
+
+/**
+ * Shared copy for the support-phase requirement. Pass undefined while the
+ * on-chain config is still loading.
+ */
+export function supportPhaseRequirementCopy(
+  thresholdPercent: number | undefined,
+): string {
+  const pct =
+    thresholdPercent !== undefined
+      ? `${thresholdPercent}%`
+      : "a minimum percentage";
+  return `The support phase requires ${pct} of total validator stake expressing support for the proposal before it can move on to discussion and voting phase`;
+}
+
 export interface GetProposalStatusParams {
   creationEpoch: number;
   startEpoch: number;
@@ -29,6 +49,8 @@ export interface GetProposalStatusParams {
   currentEpoch: number;
   clusterSupportLamports: number;
   totalStakedLamports: number;
+  /** GlobalConfig.clusterSupportPctMinBps — support threshold in basis points. */
+  clusterSupportPctMinBps: number;
   consensusResult: PublicKey | undefined;
   finalized: boolean;
   voting: boolean;
@@ -99,6 +121,7 @@ export const getProposalStatus = ({
   currentEpoch,
   clusterSupportLamports,
   totalStakedLamports,
+  clusterSupportPctMinBps,
   consensusResult,
   finalized,
   voting,
@@ -168,7 +191,7 @@ export const getProposalStatus = ({
   // At support end epoch (epoch 802) - check threshold directly
   if (currentEpoch === supportEndEpoch) {
     const requiredThresholdLamports =
-      totalStakedLamports * (SUPPORT_THRESHOLD_PERCENT / 100);
+      totalStakedLamports * (clusterSupportPctMinBps / 10_000);
     const isThresholdMet = clusterSupportLamports >= requiredThresholdLamports;
 
     if (!isThresholdMet) {
