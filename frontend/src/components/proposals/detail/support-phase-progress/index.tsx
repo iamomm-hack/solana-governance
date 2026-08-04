@@ -41,7 +41,11 @@ export function SupportPhaseProgress({ proposal }: SupportPhaseProgressProps) {
 
   const phaseEpochs =
     epochs !== undefined
-      ? getProposalPhaseEpochs(proposal.creationEpoch, epochs)
+      ? getProposalPhaseEpochs(proposal.creationEpoch, epochs, {
+          voting: proposal.voting,
+          startEpoch: proposal.startEpoch,
+          endEpoch: proposal.endEpoch,
+        })
       : undefined;
 
   const { data: supportEndsAt, isLoading: isLoadingEpochDate } =
