@@ -28,6 +28,25 @@ describe("validateProposalUrl - accepted", () => {
   });
 });
 
+// The on-chain check requires a literal https://github.com/ prefix, so submitting the raw
+// input after validating its trimmed form would be rejected by the program despite the
+// frontend having accepted it. Callers must send `normalized`.
+describe("validateProposalUrl - normalization", () => {
+  it("returns the trimmed URL as the value to submit", () => {
+    expect(validateProposalUrl(`\n  ${VALID_SGP}\t `).normalized).toBe(
+      VALID_SGP,
+    );
+  });
+
+  it("returns the normalized URL from the assert helper", () => {
+    expect(assertValidProposalUrl(`  ${VALID_SGP}  `)).toBe(VALID_SGP);
+  });
+
+  it("normalizes even when validation fails, so errors can quote the real value", () => {
+    expect(validateProposalUrl("  not a url  ").normalized).toBe("not a url");
+  });
+});
+
 describe("validateProposalUrl - rejected", () => {
   it.each([
     ["", "empty"],

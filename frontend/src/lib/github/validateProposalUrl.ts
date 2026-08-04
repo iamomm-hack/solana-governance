@@ -32,6 +32,14 @@ export interface ProposalUrlValidation {
   errors: ProposalUrlIssue<ProposalUrlErrorCode>[];
   warnings: ProposalUrlIssue<ProposalUrlWarningCode>[];
   parsed: ParsedProposalUrl;
+  /**
+   * The exact string that was validated, and the one that must be sent on chain.
+   *
+   * Validation trims, but the on-chain check requires a literal `https://github.com/` prefix
+   * with no leading whitespace — so submitting the raw input instead would be rejected by the
+   * program after the frontend had already accepted it.
+   */
+  normalized: string;
 }
 
 /**
@@ -81,7 +89,7 @@ export function validateProposalUrl(url: string): ProposalUrlValidation {
 
   const fail = (code: ProposalUrlErrorCode, message: string) => {
     errors.push({ code, message });
-    return { ok: false, errors, warnings, parsed };
+    return { ok: false, errors, warnings, parsed, normalized: trimmed };
   };
 
   // 1-5: shape. `parseProposalUrl` already distinguishes these cases.
@@ -177,13 +185,19 @@ export function validateProposalUrl(url: string): ProposalUrlValidation {
     });
   }
 
-  return { ok: errors.length === 0, errors, warnings, parsed };
+  return { ok: errors.length === 0, errors, warnings, parsed, normalized: trimmed };
 }
 
-/** Enforcement backstop for the SDK path; throws with the first error's user-facing message. */
-export function assertValidProposalUrl(url: string): void {
-  const { ok, errors } = validateProposalUrl(url);
+/**
+ * Enforcement backstop for the SDK path; throws with the first error's user-facing message.
+ *
+ * Returns the normalized URL, which callers must use in place of their raw input so the string
+ * that was checked is the string that reaches the program.
+ */
+export function assertValidProposalUrl(url: string): string {
+  const { ok, errors, normalized } = validateProposalUrl(url);
   if (!ok) throw new Error(errors[0].message);
+  return normalized;
 }
 
 function byteLength(value: string): number {

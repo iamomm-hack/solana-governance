@@ -205,12 +205,17 @@ pub fn validate_description_structure(description: &str) -> Result<GithubLinkKin
 ///
 /// Only an authoritative 404 blocks. Transport failures (offline, DNS, TLS, timeout) warn and
 /// pass, so a flaky or absent network never stops a proposal from being created.
-pub async fn validate_description(description: &str, skip_network: bool) -> Result<()> {
+///
+/// Returns the normalized link, which the caller must submit in place of the raw argument:
+/// validation trims, and the program requires a literal `https://github.com/` prefix, so a
+/// value with surrounding whitespace would be rejected on chain despite passing here.
+pub async fn validate_description(description: &str, skip_network: bool) -> Result<String> {
     let kind = validate_description_structure(description)?;
+    let normalized = description.trim().to_string();
 
     if skip_network {
         log::debug!("skipping proposal link reachability check");
-        return Ok(());
+        return Ok(normalized);
     }
 
     let GithubLinkKind::Blob {
@@ -220,14 +225,16 @@ pub async fn validate_description(description: &str, skip_network: bool) -> Resu
         path,
     } = kind
     else {
-        return Ok(());
+        return Ok(normalized);
     };
 
     // Checked against the raw URL rather than the HTML page: 200/404 is unambiguous, there is
     // no HTML to parse, it is not subject to the GitHub API rate limit, and it is exactly the
     // URL the frontend will fetch — so a pass here proves the frontend can render it.
     let raw_url = format!("https://raw.githubusercontent.com/{owner}/{repo}/{git_ref}/{path}");
-    check_reachable(&raw_url).await
+    check_reachable(&raw_url).await?;
+
+    Ok(normalized)
 }
 
 async fn check_reachable(raw_url: &str) -> Result<()> {
@@ -580,6 +587,17 @@ mod tests {
         assert_eq!(proposal_number("README.md"), None);
         assert_eq!(proposal_number("007543-too-long.md"), None);
         assert_eq!(proposal_number("0001abc.md"), None);
+    }
+
+    /// The program requires a literal `https://github.com/` prefix, so submitting the raw
+    /// argument after validating its trimmed form would be rejected on chain despite the CLI
+    /// having accepted it. Callers must submit what `validate_description` returns.
+    #[tokio::test]
+    async fn returns_the_trimmed_link_for_submission() {
+        let normalized = validate_description(&format!("\n  {SGP_FILE}\t "), true)
+            .await
+            .expect("should accept a link with surrounding whitespace");
+        assert_eq!(normalized, SGP_FILE);
     }
 
     #[test]

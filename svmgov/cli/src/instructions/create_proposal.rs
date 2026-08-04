@@ -28,8 +28,10 @@ pub async fn create_proposal(
     );
 
     // Validated before loading a keypair, touching RPC, or starting a spinner, so a bad link
-    // fails immediately and cleanly rather than as an opaque custom program error.
-    validate_description(&proposal_description, skip_link_check).await?;
+    // fails immediately and cleanly rather than as an opaque custom program error. The
+    // normalized link is what gets submitted, so the value we checked is the value the program
+    // sees — a description with surrounding whitespace would otherwise fail on chain.
+    let proposal_description = validate_description(&proposal_description, skip_link_check).await?;
 
     let (payer, vote_account, program, _merkle_proof_program) =
         setup_all(identity_keypair, rpc_url).await?;
