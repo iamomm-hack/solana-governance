@@ -200,6 +200,30 @@ describe("fetchProposalDocument - pull request URLs", () => {
     expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 
+  it("returns unsupported when a PR changes several proposal documents", async () => {
+    const fetchImpl = jest
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse([
+          prFile("proposals/sgp-0004-a.md", "added"),
+          prFile("proposals/sgp-0009-b.md", "added"),
+        ]),
+      );
+
+    const result = await fetchProposalDocument(
+      `https://github.com/${SGP_REPO}/pull/3`,
+      { fetchImpl },
+    );
+
+    // Better to show nothing than to attach one proposal's summary to another's vote.
+    expect(result).toMatchObject({ status: "unsupported" });
+    expect((result as { reason: string }).reason).toContain(
+      "does not identify one",
+    );
+    // Never reaches the raw fetch.
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
   it("returns unsupported for a pull request that does not exist", async () => {
     const fetchImpl = jest.fn().mockResolvedValue(errorResponse(404));
 

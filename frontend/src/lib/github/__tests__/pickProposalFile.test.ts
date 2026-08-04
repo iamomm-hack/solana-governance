@@ -40,22 +40,21 @@ describe("pickProposalFile", () => {
 
   it("picks the proposal document out of the real PR #3 payload", () => {
     expect(pickProposalFile(realPr3, sgpConfig)).toEqual({
-      path: "proposals/sgp-0001-solana-constitution.md",
-      headSha: HEAD_SHA,
-      ref: { number: "0001", kind: "sgp", label: "SGP-0001" },
+      status: "ok",
+      file: {
+        path: "proposals/sgp-0001-solana-constitution.md",
+        headSha: HEAD_SHA,
+        ref: { number: "0001", kind: "sgp", label: "SGP-0001" },
+      },
     });
   });
 
   it("excludes the root-level template even though it mentions sgp", () => {
-    expect(
-      pickProposalFile([file("XXXX-sgp-template.md", "modified")], sgpConfig),
-    ).toBeUndefined();
+    expect(pickProposalFile([file("XXXX-sgp-template.md", "modified")], sgpConfig)).toEqual({ status: "none" });
   });
 
   it("excludes a proposal-shaped file outside the proposals directory", () => {
-    expect(
-      pickProposalFile([file("drafts/sgp-0009-thing.md")], sgpConfig),
-    ).toBeUndefined();
+    expect(pickProposalFile([file("drafts/sgp-0009-thing.md")], sgpConfig)).toEqual({ status: "none" });
   });
 
   it("prefers an added file over a modified one", () => {
@@ -66,10 +65,15 @@ describe("pickProposalFile", () => {
       ],
       sgpConfig,
     );
-    expect(picked?.path).toBe("proposals/sgp-0003-new.md");
+    expect(picked).toMatchObject({
+      status: "ok",
+      file: { path: "proposals/sgp-0003-new.md" },
+    });
   });
 
-  it("falls back to the lowest number when statuses tie", () => {
+  // Guessing here would risk showing one proposal's number and summary against a different
+  // proposal's vote, so the ambiguity is reported instead.
+  it("reports ambiguity when two added files have equal claim", () => {
     const picked = pickProposalFile(
       [
         file("proposals/sgp-0009-b.md", "added"),
@@ -77,23 +81,33 @@ describe("pickProposalFile", () => {
       ],
       sgpConfig,
     );
-    expect(picked?.path).toBe("proposals/sgp-0004-a.md");
+    expect(picked).toEqual({
+      status: "ambiguous",
+      paths: ["proposals/sgp-0004-a.md", "proposals/sgp-0009-b.md"],
+    });
+  });
+
+  it("reports ambiguity when two modified files have equal claim", () => {
+    const picked = pickProposalFile(
+      [
+        file("proposals/sgp-0009-b.md", "modified"),
+        file("proposals/sgp-0004-a.md", "modified"),
+      ],
+      sgpConfig,
+    );
+    expect(picked).toMatchObject({ status: "ambiguous" });
   });
 
   it("skips removed files", () => {
-    expect(
-      pickProposalFile([file("proposals/sgp-0001-x.md", "removed")], sgpConfig),
-    ).toBeUndefined();
+    expect(pickProposalFile([file("proposals/sgp-0001-x.md", "removed")], sgpConfig)).toEqual({ status: "none" });
   });
 
-  it("returns undefined when a PR touches no proposal file", () => {
-    expect(
-      pickProposalFile([file("README.md", "modified")], sgpConfig),
-    ).toBeUndefined();
+  it("reports none when a PR touches no proposal file", () => {
+    expect(pickProposalFile([file("README.md", "modified")], sgpConfig)).toEqual({ status: "none" });
   });
 
-  it("returns undefined for an empty file list", () => {
-    expect(pickProposalFile([], sgpConfig)).toBeUndefined();
+  it("reports none for an empty file list", () => {
+    expect(pickProposalFile([], sgpConfig)).toEqual({ status: "none" });
   });
 
   it("handles a SIMD-repo pull request", () => {
@@ -105,9 +119,12 @@ describe("pickProposalFile", () => {
       simdConfig,
     );
     expect(picked).toEqual({
-      path: "proposals/0099-new-thing.md",
-      headSha: HEAD_SHA,
-      ref: { number: "0099", kind: "simd", label: "SIMD-0099" },
+      status: "ok",
+      file: {
+        path: "proposals/0099-new-thing.md",
+        headSha: HEAD_SHA,
+        ref: { number: "0099", kind: "simd", label: "SIMD-0099" },
+      },
     });
   });
 
@@ -116,12 +133,14 @@ describe("pickProposalFile", () => {
       [file("docs/0007-idea.md", "added", "someone/fork")],
       unknownConfig,
     );
-    expect(picked?.path).toBe("docs/0007-idea.md");
+    expect(picked).toMatchObject({
+      status: "ok",
+      file: { path: "docs/0007-idea.md" },
+    });
   });
 
   it("skips a file whose contents_url carries no ref", () => {
-    expect(
-      pickProposalFile(
+    expect(pickProposalFile(
         [
           {
             filename: "proposals/sgp-0001-x.md",
@@ -130,8 +149,7 @@ describe("pickProposalFile", () => {
           },
         ],
         sgpConfig,
-      ),
-    ).toBeUndefined();
+      )).toEqual({ status: "none" });
   });
 });
 

@@ -19,17 +19,27 @@ export interface PickedProposalFile {
   ref: ProposalRef | undefined;
 }
 
+export type PickProposalFileResult =
+  | { status: "ok"; file: PickedProposalFile }
+  | { status: "none" }
+  /** Several documents have equal claim; the description does not say which is meant. */
+  | { status: "ambiguous"; paths: string[] };
+
 /**
  * Picks the one proposal document out of a pull request's changed files.
  *
  * A real proposal PR touches more than the proposal: PR #3 on solana-governance-proposals
  * changes `README.md` and the root-level `XXXX-sgp-template.md` alongside
  * `proposals/sgp-0001-solana-constitution.md`. Only the last is the document we want.
+ *
+ * Where no single file stands out, this reports the ambiguity rather than guessing. Picking by
+ * something arbitrary like the lowest number would risk showing one proposal's summary and
+ * number against a different proposal's vote, which is worse than showing nothing.
  */
 export function pickProposalFile(
   files: PullRequestFile[],
   config: ProposalRepoConfig,
-): PickedProposalFile | undefined {
+): PickProposalFileResult {
   const candidates = files
     .filter((file) => file.status !== "removed")
     .map((file) => {
@@ -48,26 +58,24 @@ export function pickProposalFile(
     })
     .filter((candidate) => candidate !== undefined);
 
-  if (candidates.length === 0) return undefined;
+  if (candidates.length === 0) return { status: "none" };
 
-  candidates.sort((a, b) => {
-    // A newly added file is the proposal itself; a modified one is more likely an edit
-    // to something incidental.
-    const added = score(b.file.status === "added") - score(a.file.status === "added");
-    if (added !== 0) return added;
+  // A PR that adds one proposal while editing others — a cross-reference, say — is not
+  // ambiguous: the added file is its subject. Two files at equal standing genuinely are.
+  const added = candidates.filter(
+    (candidate) => candidate.file.status === "added",
+  );
+  const contenders = added.length > 0 ? added : candidates;
 
-    const inProposalsDir =
-      score(dirname(b.path) === "proposals") - score(dirname(a.path) === "proposals");
-    if (inProposalsDir !== 0) return inProposalsDir;
+  if (contenders.length > 1) {
+    return {
+      status: "ambiguous",
+      paths: contenders.map((candidate) => candidate.path).sort(),
+    };
+  }
 
-    const depth = depthOf(a.path) - depthOf(b.path);
-    if (depth !== 0) return depth;
-
-    return Number(a.ref.number) - Number(b.ref.number);
-  });
-
-  const { path, headSha, ref } = candidates[0];
-  return { path, headSha, ref };
+  const { path, headSha, ref } = contenders[0];
+  return { status: "ok", file: { path, headSha, ref } };
 }
 
 /**
@@ -92,12 +100,4 @@ function basename(path: string): string {
 function dirname(path: string): string {
   const index = path.lastIndexOf("/");
   return index === -1 ? "" : path.slice(0, index);
-}
-
-function depthOf(path: string): number {
-  return path.split("/").length;
-}
-
-function score(value: boolean): number {
-  return value ? 1 : 0;
 }

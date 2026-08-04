@@ -105,16 +105,28 @@ export async function fetchProposalDocument(
   }
 
   const picked = pickProposalFile(files, config);
-  if (!picked) {
+
+  if (picked.status === "none") {
     return {
       status: "unsupported",
       reason: `Pull request #${parsed.pullNumber} does not change a proposal document`,
     };
   }
 
+  if (picked.status === "ambiguous") {
+    return {
+      status: "unsupported",
+      reason: `Pull request #${parsed.pullNumber} changes ${picked.paths.length} proposal documents (${picked.paths.join(", ")}), so the description does not identify one`,
+    };
+  }
+
   // The head may live on a fork, but GitHub serves fork commits from the base repo's object
   // network, so the base repo path at the head SHA resolves for both cases.
-  const sourceUrl = rawContentUrl(parsed.repo, picked.headSha, picked.path);
+  const sourceUrl = rawContentUrl(
+    parsed.repo,
+    picked.file.headSha,
+    picked.file.path,
+  );
   const text = await fetchRawMarkdown(sourceUrl, doFetch, options.signal);
   if (text === undefined) {
     return {
@@ -122,7 +134,7 @@ export async function fetchProposalDocument(
       reason: `Proposal file from pull request #${parsed.pullNumber} is no longer available`,
     };
   }
-  return buildDocument(text, picked.ref, sourceUrl);
+  return buildDocument(text, picked.file.ref, sourceUrl);
 }
 
 function buildDocument(
