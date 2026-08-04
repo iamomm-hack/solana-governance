@@ -76,7 +76,6 @@ export interface ProposalPhaseEpochs {
 export interface ProposalPhaseAnchors {
   voting: boolean;
   startEpoch: number;
-  endEpoch: number;
 }
 
 export function getProposalPhaseEpochs(

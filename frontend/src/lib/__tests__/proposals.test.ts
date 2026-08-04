@@ -630,7 +630,6 @@ describe("getProposalPhaseEpochs", () => {
     const phases = getProposalPhaseEpochs(creationEpoch, epochs, {
       voting: false,
       startEpoch: 0,
-      endEpoch: 0,
     });
 
     expect(phases.discussionEndEpoch).toBe(1026);
@@ -642,7 +641,6 @@ describe("getProposalPhaseEpochs", () => {
     const phases = getProposalPhaseEpochs(creationEpoch, epochs, {
       voting: true,
       startEpoch: 1021,
-      endEpoch: 1024,
     });
 
     expect(phases.discussionEndEpoch).toBe(1021);
@@ -655,7 +653,6 @@ describe("getProposalPhaseEpochs", () => {
     const phases = getProposalPhaseEpochs(creationEpoch, epochs, {
       voting: true,
       startEpoch: 0,
-      endEpoch: 0,
     });
 
     expect(phases.discussionEndEpoch).toBe(1026);

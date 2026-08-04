@@ -54,7 +54,6 @@ export default function PhaseTimeline({
     ? getProposalPhaseEpochs(proposal.creationEpoch, epochConstants, {
         voting: proposal.voting,
         startEpoch: proposal.startEpoch,
-        endEpoch: proposal.endEpoch,
       })
     : undefined;
   // Once voting is scheduled on-chain, the proposal's endEpoch is definitive.

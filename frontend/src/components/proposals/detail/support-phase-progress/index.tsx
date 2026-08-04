@@ -44,7 +44,6 @@ export function SupportPhaseProgress({ proposal }: SupportPhaseProgressProps) {
       ? getProposalPhaseEpochs(proposal.creationEpoch, epochs, {
           voting: proposal.voting,
           startEpoch: proposal.startEpoch,
-          endEpoch: proposal.endEpoch,
         })
       : undefined;
 
