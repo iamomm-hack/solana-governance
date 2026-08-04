@@ -11,6 +11,7 @@ import {
   deriveGlobalConfigPda,
 } from "./helpers";
 import { deriveProposalAccount } from "../helpers";
+import { assertValidProposalUrl } from "@/lib/github";
 
 /**
  * Creates a new governance proposal
@@ -23,6 +24,11 @@ export async function createProposal(
   if (!wallet || !wallet.publicKey) {
     throw new Error("Wallet not connected");
   }
+
+  // Enforced here rather than only in the modal so every caller inherits it. The on-chain
+  // check accepts anything github.com-shaped, including pull request links, which the
+  // frontend then cannot resolve to a proposal document.
+  assertValidProposalUrl(description);
 
   // Generate random seed if not provided
   const seedValue = new BN(
