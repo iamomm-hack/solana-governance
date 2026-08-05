@@ -57,9 +57,10 @@ export function DashboardStats({
 
   const snapshotSlot = snapshotMeta?.slot;
   // "-" reads as a legitimate value; say so explicitly when the NCN API could not be reached.
-  const snapshotSlotValue = isErrorSnapshotMeta
-    ? "Unavailable"
-    : formatOptionalSlot(snapshotSlot);
+  const snapshotSlotValue = 
+    isErrorSnapshotMeta || endpointType === "custom"
+      ? "Unavailable"
+      : formatOptionalSlot(snapshotSlot);
   const delegationsReceived = votingPower;
   // TODO: clarify what this number is exactly
   const voteAccountsCount = 321;
