@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Governance FAQ | Solana Validator Governance",
@@ -58,8 +57,8 @@ const faqEntries: FaqEntry[] = [
     answer: (
       <>
         They answer different questions. An SGP answers{" "}
-        <em>&quot;should we do this?&quot;</em> and guages community support.
-        SGPs are  decided by a stake-weighted vote of validators and stakers.
+        <em>&quot;should we do this?&quot;</em> and gauges community support.
+        SGPs are decided by a stake-weighted vote of validators and stakers.
         A{" "}
         <ExternalLink href="https://github.com/solana-foundation/solana-improvement-documents">
           SIMD
@@ -76,7 +75,7 @@ const faqEntries: FaqEntry[] = [
     answer: (
       <>
         A vote occurs when the validator set asks for one. An SGP vote is
-        triggered when{" "} <strong>15% of active stake</strong> supports
+        triggered when <strong>15% of active stake</strong> supports
         holding it. If less than 15% of stake signals support within the
         support window, no vote occurs. This keeps voting reserved for
         systemic decisions with genuine community interest.
@@ -126,14 +125,14 @@ const faqEntries: FaqEntry[] = [
       <>
         Anyone can author a draft SGP as a pull request in the{" "}
         <ExternalLink href={SGP_REPO_URL}>SGP repository</ExternalLink>.
-        Creating the on-chain propsal must be done by a validator
+        Creating the on-chain proposal must be done by a validator
         with at least <strong>100,000 SOL of active stake</strong>. The minimum
         stake required for proposals prevents spam.
       </>
     ),
   },
   {
-    question: "How is the vote vote weighted?",
+    question: "How is the vote weighted?",
     answer: (
       <>
         By active stake, at the snapshot taken before voting opens. Each vote is
@@ -150,8 +149,8 @@ const faqEntries: FaqEntry[] = [
         Yes. By default your stake votes with your validator, but you have{" "}
         <strong>vote sovereignty</strong>: you can cast an override vote with
         your own stake account before, after, or in the absence of your
-        validator&apos;s vote. A staker can override the validator's vote
-        for your portion of the stake delegated to the validator.
+        validator&apos;s vote. A staker can override the validator&apos;s vote
+        for the portion of stake they delegate to the validator.
       </>
     ),
   },
@@ -166,8 +165,9 @@ const faqEntries: FaqEntry[] = [
         : a quorum of <strong>one-third of network stake</strong> must
         participate (For + Against + Abstain), and{" "}
         <strong>two-thirds of participating stake</strong> must vote For. If
-        quorum is not met, the outcome is <em>inconclusive</em>. A SGP that does
-        not reach quorum does not pass and does not block any associated SIMD.
+        quorum is not met, the outcome is <em>inconclusive</em>. An SGP that
+        does not reach quorum does not pass and does not block any associated
+        SIMD.
       </>
     ),
   },
