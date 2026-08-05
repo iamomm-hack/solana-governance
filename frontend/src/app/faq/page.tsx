@@ -10,6 +10,8 @@ const SGP_REPO_URL =
   "https://github.com/solana-foundation/solana-governance-proposals";
 const CONSTITUTION_PR_URL =
   "https://github.com/solana-foundation/solana-governance-proposals/pull/3";
+const SGP_DISCUSSIONS_URL =
+  "https://github.com/solana-foundation/solana-governance-proposals/discussions";
 const DOCS_URL = "https://docs.governance.solana.com";
 
 function ExternalLink({
@@ -175,10 +177,10 @@ const faqEntries: FaqEntry[] = [
     question: "Where do I discuss proposals?",
     answer: (
       <>
-        The canonical venue is GitHub. Discussions should occur on each 
-        proposal&apos;s pull request and the
-        repository&apos;s Discussions in the{" "}
-        <ExternalLink href={SGP_REPO_URL}>SGP repository</ExternalLink>.
+        The canonical venue is GitHub. Discussions should occur on each
+        proposal&apos;s pull request and the repository&apos;s{" "}
+        <ExternalLink href={SGP_DISCUSSIONS_URL}>Discussions</ExternalLink> in
+        the <ExternalLink href={SGP_REPO_URL}>SGP repository</ExternalLink>.
         Conversation on other platforms is welcome as advisory input, but
         GitHub is where deliberation formally happens.
       </>
@@ -235,8 +237,9 @@ export default function FaqPage() {
       </div>
 
       <footer className="text-sm text-white/50">
-        Something missing? Open a discussion in the{" "}
-        <ExternalLink href={SGP_REPO_URL}>SGP repository</ExternalLink>.
+        Something missing? Open a{" "}
+        <ExternalLink href={SGP_DISCUSSIONS_URL}>discussion</ExternalLink> in
+        the <ExternalLink href={SGP_REPO_URL}>SGP repository</ExternalLink>.
       </footer>
     </main>
   );
