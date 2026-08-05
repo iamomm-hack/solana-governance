@@ -238,7 +238,7 @@ export default function FaqPage() {
 
       <footer className="text-sm text-white/50">
         Something missing? Open a{" "}
-        <ExternalLink href={SGP_DISCUSSIONS_URL}>discussion</ExternalLink> in
+        <ExternalLink href={`${SGP_DISCUSSIONS_URL}/new/choose`}>discussion</ExternalLink> in
         the <ExternalLink href={SGP_REPO_URL}>SGP repository</ExternalLink>.
       </footer>
     </main>
