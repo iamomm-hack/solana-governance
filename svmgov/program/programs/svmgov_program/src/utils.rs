@@ -91,6 +91,12 @@ pub fn is_valid_github_link(link: &str) -> bool {
         return false;
     }
 
+    // URL consumers normalize `..` by walking to a parent path. Reject it here so the
+    // raw on-chain string and the URL that clients resolve always identify the same repo.
+    if path.contains("/../") || path.ends_with("/..") {
+        return false;
+    }
+
     let mut segment_count = 0;
     let mut in_segment = false;
     let mut has_invalid_char = false;
