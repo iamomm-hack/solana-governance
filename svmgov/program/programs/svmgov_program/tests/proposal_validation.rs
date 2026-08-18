@@ -16,7 +16,7 @@ use {
 const MAX_TITLE_LEN: usize = 200;
 const MAX_DESCRIPTION_LEN: usize = 500;
 
-const VALID_LINK: &str = "https://github.com/solana-foundation/solana-governance-proposals";
+const VALID_LINK: &str = "https://github.com/solana-foundation/solana-governance-proposals/blob/commit-sha/proposals/title.md";
 
 /// One funded validator is all these tests need.
 fn setup() -> Harness {
