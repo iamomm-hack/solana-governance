@@ -299,6 +299,22 @@ mod tests {
     use super::*;
     use crate::error::GovernanceError;
 
+    #[test]
+    fn github_link_requires_the_allowed_repository_without_traversal() {
+        assert!(is_valid_github_link(
+            "https://github.com/solana-foundation/solana-governance-proposals/blob/main/proposals/sgp-0001-title.md"
+        ));
+        assert!(!is_valid_github_link(
+            "https://github.com/attacker/repo/blob/ref/0022-x.md"
+        ));
+        assert!(!is_valid_github_link(
+            "https://github.com/solana-foundation/solana-governance-proposals/../../attacker/repo/blob/ref/0022-x.md"
+        ));
+        assert!(!is_valid_github_link(
+            "https://github.com/solana-foundation/solana-governance-proposals"
+        ));
+    }
+
     // --- check_support_window ---
 
     #[test]
