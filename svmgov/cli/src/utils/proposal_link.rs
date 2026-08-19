@@ -3,7 +3,7 @@
 //! The on-chain program (`svmgov_program::utils::is_valid_github_link`) only checks that the
 //! description must name the approved `solana-foundation/solana-governance-proposals` GitHub
 //! repository, have 2-10 path segments, contain no `..` traversal segment, and use only
-//! alphanumerics plus `-`, `_`, `.`. A pull request link such as `.../owner/repo/pull/3` is four
+//! ASCII alphanumerics plus `-`, `_`, `.`. A pull request link such as `.../owner/repo/pull/3` is four
 //! clean segments, so it sails through the broad shape check — and then the frontend cannot
 //! resolve it to a proposal document.
 //!
@@ -326,10 +326,10 @@ fn assert_on_chain_compatible(link: &str) -> Result<()> {
 
     if let Some(bad) = path
         .chars()
-        .find(|c| *c != '/' && !c.is_alphanumeric() && !matches!(c, '-' | '_' | '.'))
+        .find(|c| *c != '/' && !c.is_ascii_alphanumeric() && !matches!(c, '-' | '_' | '.'))
     {
         return Err(anyhow!(
-            "`--description` contains `{bad}`, which the on-chain program rejects; only letters, \
+            "`--description` contains `{bad}`, which the on-chain program rejects; only ASCII letters, \
              digits, `-`, `_` and `.` are allowed in the path\n\n  got: {link}"
         ));
     }
@@ -519,12 +519,14 @@ mod tests {
 
     #[test]
     fn rejects_characters_the_program_rejects() {
-        let error = validate_description_structure(
+        for link in [
             "https://github.com/solana-foundation/solana-governance-proposals/blob/main/proposals/sgp-0001%20x.md",
-        )
-        .unwrap_err()
-        .to_string();
-        assert!(error.contains("on-chain program rejects"), "got: {error}");
+            "https://github.com/solana-foundation/solana-governance-proposals/blob/main/proposals/sgp-0001-café.md",
+            "https://github.com/solana-foundation/solana-governance-proposals/blob/main/proposals/sgp-0001-测试.md",
+        ] {
+            let error = validate_description_structure(link).unwrap_err().to_string();
+            assert!(error.contains("on-chain program rejects"), "got: {error}");
+        }
     }
 
     #[test]
@@ -568,7 +570,7 @@ mod tests {
             );
             assert!(
                 path.chars()
-                    .all(|c| c == '/' || c.is_alphanumeric() || matches!(c, '-' | '_' | '.')),
+                    .all(|c| c == '/' || c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.')),
                 "{link}"
             );
         }

@@ -122,7 +122,7 @@ pub fn is_valid_github_link(link: &str) -> bool {
                 if !in_segment {
                     in_segment = true;
                 }
-                if !c.is_alphanumeric() && !matches!(c, '-' | '_' | '.') {
+                if !c.is_ascii_alphanumeric() && !matches!(c, '-' | '_' | '.') {
                     has_invalid_char = true;
                     break;
                 }
@@ -313,6 +313,19 @@ mod tests {
         assert!(!is_valid_github_link(
             "https://github.com/solana-foundation/solana-governance-proposals"
         ));
+    }
+
+    #[test]
+    fn github_link_rejects_unicode_path_characters() {
+        let prefix =
+            "https://github.com/solana-foundation/solana-governance-proposals/blob/main/proposals/";
+
+        for filename in ["sgp-0001-café.md", "sgp-0001-测试.md", "sgp-0001-а.md"] {
+            assert!(
+                !is_valid_github_link(&format!("{prefix}{filename}")),
+                "Unicode path character should be rejected: {filename}"
+            );
+        }
     }
 
     // --- check_support_window ---
