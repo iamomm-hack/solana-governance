@@ -57,8 +57,13 @@ const COMMIT_SHA = /^[0-9a-f]{40}$/i;
  */
 const ON_CHAIN_PREFIX = "https://github.com/";
 
-/** Character class the on-chain validator allows in the path, plus `/` as the separator. */
-const ON_CHAIN_DISALLOWED_CHAR = /[^\p{Alphabetic}\p{N}\-_./]/u;
+/**
+ * Character class the on-chain validator allows in the path, plus `/` as the separator.
+ *
+ * This must remain ASCII-only: Rust's `is_ascii_alphanumeric` rejects Unicode letters and
+ * digits that JavaScript's Unicode property classes would otherwise accept.
+ */
+const ON_CHAIN_DISALLOWED_CHAR = /[^A-Za-z0-9\-_./]/;
 
 const ON_CHAIN_MIN_SEGMENTS = 2;
 const ON_CHAIN_MAX_SEGMENTS = 10;
@@ -228,7 +233,7 @@ function describeOnChainViolation(url: string): string | undefined {
 
   const bad = path.match(ON_CHAIN_DISALLOWED_CHAR);
   if (bad) {
-    return `The link contains "${bad[0]}", which the on-chain program rejects; only letters, digits, "-", "_" and "." are allowed in the path.`;
+    return `The link contains "${bad[0]}", which the on-chain program rejects; only ASCII letters, digits, "-", "_" and "." are allowed in the path.`;
   }
 
   return undefined;

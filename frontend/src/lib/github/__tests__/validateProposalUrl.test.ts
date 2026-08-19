@@ -91,6 +91,19 @@ describe("validateProposalUrl - rejected", () => {
     expect(codes(result.errors)).toContain("rejected-on-chain");
   });
 
+  it.each([
+    `https://github.com/${SGP_REPO}/blob/main/proposals/sgp-0001-café.md`,
+    `https://github.com/${SGP_REPO}/blob/main/proposals/sgp-0001-测试.md`,
+    `https://github.com/${SGP_REPO}/blob/main/proposals/sgp-0001-а.md`,
+  ])("rejects Unicode path characters that the program rejects: %s", (url) => {
+    const result = validateProposalUrl(url);
+    expect(result.ok).toBe(false);
+    expect(codes(result.errors)).toContain("rejected-on-chain");
+    expect(result.errors.map((error) => error.message).join(" ")).toContain(
+      "ASCII",
+    );
+  });
+
   it("rejects a link longer than the on-chain description limit", () => {
     const url = `https://github.com/${SGP_REPO}/blob/main/proposals/${"a".repeat(500)}/sgp-0001-x.md`;
     expect(codes(validateProposalUrl(url).errors)).toContain("too-long");
