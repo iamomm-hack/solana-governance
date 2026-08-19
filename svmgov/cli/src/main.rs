@@ -124,7 +124,7 @@ enum Commands {
         title: String,
 
         /// Link in solana-foundation/solana-governance-proposals for the proposal description.
-        #[arg(long, help = "Proposal link in solana-foundation/solana-governance-proposals (no .. path segments)")]
+        #[arg(long, help = "Proposal link in https://github.com/solana-foundation/solana-governance-proposals (no .. path segments)")]
         description: String,
 
         /// Skip the network check that the linked proposal file exists.
