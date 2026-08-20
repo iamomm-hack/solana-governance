@@ -280,53 +280,6 @@ impl<'info> CastVoteOverride<'info> {
                 against_votes_lamports,
                 abstain_votes_lamports,
             });
-            if self.vote_override_cache.total_stake == 0 {
-                // First override for this validator - initialize cache
-                self.vote_override_cache.set_inner(VoteOverrideCache {
-                    validator: meta_merkle_leaf.vote_account,
-                    proposal: self.proposal.key(),
-                    vote_account_validator: self.validator_vote.key(),
-                    for_votes_lamports,
-                    against_votes_lamports,
-                    abstain_votes_lamports,
-                    total_stake: delegator_stake,
-                    bump: bumps.vote_override_cache,
-                });
-            } else {
-                // Subsequent override for this validator - update cache
-                require_eq!(
-                    self.vote_override_cache.proposal,
-                    self.proposal.key(),
-                    GovernanceError::InvalidVoteAccount
-                );
-                require_eq!(
-                    self.vote_override_cache.vote_account_validator,
-                    self.validator_vote.key(),
-                    GovernanceError::InvalidVoteAccount
-                );
-
-                self.vote_override_cache.for_votes_lamports = self
-                    .vote_override_cache
-                    .for_votes_lamports
-                    .checked_add(for_votes_lamports)
-                    .ok_or(GovernanceError::ArithmeticOverflow)?;
-                self.vote_override_cache.against_votes_lamports = self
-                    .vote_override_cache
-                    .against_votes_lamports
-                    .checked_add(against_votes_lamports)
-                    .ok_or(GovernanceError::ArithmeticOverflow)?;
-                self.vote_override_cache.abstain_votes_lamports = self
-                    .vote_override_cache
-                    .abstain_votes_lamports
-                    .checked_add(abstain_votes_lamports)
-                    .ok_or(GovernanceError::ArithmeticOverflow)?;
-
-                self.vote_override_cache.total_stake = self
-                    .vote_override_cache
-                    .total_stake
-                    .checked_add(delegator_stake)
-                    .ok_or(GovernanceError::ArithmeticOverflow)?;
-            }
         } else {
             // Validator has no vote yet.
             // Path 2a: nobody -> delegator (first delegator to override)
