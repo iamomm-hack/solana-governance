@@ -666,7 +666,7 @@ pub struct VoteAccountState {
     pub bump: u8,
 }
 
-#[derive(Debug, BorshDeserialize)]
+#[derive(Debug, BorshDeserialize, PartialEq, Eq)]
 pub struct VoteOverrideCacheState {
     pub validator: [u8; 32],
     pub proposal: [u8; 32],

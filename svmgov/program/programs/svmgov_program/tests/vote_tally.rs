@@ -345,6 +345,61 @@ fn override_before_and_after_validator_vote() {
     );
 }
 
+#[test]
+fn pre_vote_override_changes_cache() {
+    let (mut h, s) = voting_fixture();
+
+    cast_delegator_override(&mut h, &s, 0, 0, 0, 10_000, 0);
+    let cache_after_first_override =
+        fetch_override_cache(&h, &s, 0).expect("pre-vote override cache");
+    assert_eq!(cache_after_first_override.total_stake, D0);
+    assert_eq!(
+        (
+            cache_after_first_override.for_votes_lamports,
+            cache_after_first_override.against_votes_lamports,
+            cache_after_first_override.abstain_votes_lamports,
+        ),
+        (0, D0, 0),
+    );
+
+    cast_delegator_override(&mut h, &s, 0, 1, 0, 0, 10_000);
+    let cache_after_second_override =
+        fetch_override_cache(&h, &s, 0).expect("pre-vote override cache");
+    assert_ne!(cache_after_second_override, cache_after_first_override);
+    assert_eq!(cache_after_second_override.total_stake, D0 + D1);
+    assert_eq!(
+        (
+            cache_after_second_override.for_votes_lamports,
+            cache_after_second_override.against_votes_lamports,
+            cache_after_second_override.abstain_votes_lamports,
+        ),
+        (0, D0, D1),
+    );
+}
+
+#[test]
+fn post_vote_override_does_not_change_cache() {
+    let (mut h, s) = voting_fixture();
+
+    // The pre-vote override creates the cache that reduces the validator's
+    // effective stake when it votes.
+    cast_delegator_override(&mut h, &s, 0, 0, 0, 10_000, 0);
+    cast_validator_vote(&mut h, &s, 0, 10_000, 0, 0);
+    let cache_after_validator_vote =
+        fetch_override_cache(&h, &s, 0).expect("pre-vote override cache");
+
+    // Once the validator Vote exists, subsequent overrides are applied to the
+    // Vote and proposal directly; the pre-vote cache must remain unchanged.
+    cast_delegator_override(&mut h, &s, 0, 1, 0, 0, 10_000);
+    let cache_after_post_vote_override =
+        fetch_override_cache(&h, &s, 0).expect("pre-vote override cache");
+
+    assert_eq!(
+        cache_after_post_vote_override, cache_after_validator_vote,
+        "post-vote override must not update the pre-vote cache"
+    );
+}
+
 // ---------------------------------------------------------------------------
 // 5. Vote modifications, across the same ordering matrix.
 // ---------------------------------------------------------------------------
