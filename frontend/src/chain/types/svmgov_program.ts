@@ -8,7 +8,7 @@ export type SvmgovProgram = {
   "address": "govYkyQ3ePtGULAtY6V75qjWE8UH4vCUVQ1W4HdCAZU",
   "metadata": {
     "name": "svmgovProgram",
-    "version": "0.4.0-40100",
+    "version": "0.5.0-40200",
     "spec": "0.1.0",
     "description": "Created with Anchor"
   },

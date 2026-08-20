@@ -8,7 +8,7 @@ export type GovV1 = {
   "address": "ncnwF8AgynRcdEnGLcprSQNaKvgSMTgk3yPRc8cf9Zf",
   "metadata": {
     "name": "govV1",
-    "version": "0.4.0-40100",
+    "version": "0.5.0-40200",
     "spec": "0.1.0",
     "description": "Governance NCN Voting Program"
   },

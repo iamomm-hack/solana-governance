@@ -117,7 +117,7 @@ pub fn set_ledger_tool_arg_matches(
 
     let app = App::new("tip-router-operator-cli")
         .about("Tip Router Operator CLI")
-        .version("0.1.0")
+        .version(env!("CARGO_PKG_VERSION"))
         .global_setting(AppSettings::ColoredHelp)
         .global_setting(AppSettings::InferSubcommands)
         .global_setting(AppSettings::UnifiedHelpMessage)
