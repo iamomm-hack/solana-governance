@@ -33,7 +33,9 @@ export type NcnApiResource =
 
 /** User-facing explanation for a stake or vote account that has no leaf in the proposal snapshot. */
 export const NCN_PROOF_NOT_FOUND_MESSAGE =
-  "This account had no active stake in the proposal snapshot and cannot vote.";
+  "This account had no active stake in the proposal snapshot and cannot vote. "
+  +
+  "If you believe this to be an error, open an issue at https://github.com/solana-foundation/solana-governance/issues/new.";
 
 const hostOf = (url: string): string => {
   try {
