@@ -50,8 +50,8 @@ export async function modifyVoteOverride(
     throw new Error("Wallet not connected");
   }
 
-  // Keep the signing account stable throughout the two-transaction flow. A wallet extension can
-  // switch accounts while its approval dialog is open, in which case it cannot sign this vote.
+  // Both transactions require this same account. signTransactionForWallet verifies that the
+  // wallet-returned transaction contains its signature before either transaction is submitted.
   const signer = wallet.publicKey;
 
   if (consensusResult === undefined) {

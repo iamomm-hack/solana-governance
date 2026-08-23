@@ -20,44 +20,50 @@ export class WalletSigningError extends Error {
 }
 
 /**
- * Signs a transaction and verifies that the wallet signed for the account used to build it.
+ * Signs a transaction and verifies that the returned signature is for the account that built it.
  *
- * Wallet extensions can switch accounts while a signing request is open. In that case, sending
- * the returned transaction would otherwise fail later with web3.js's opaque "missing signature"
- * serialization error.
+ * A wallet can return a transaction signed by a different account, or no signature at all. This
+ * guard prevents either response from reaching web3.js serialization, where it would otherwise
+ * surface as an opaque "missing signature" error. It cannot observe later React wallet-provider
+ * updates; it validates only the transaction returned by the wallet.
  *
  * @param wallet - Wallet adapter used to sign the transaction.
  * @param transaction - Fully constructed transaction with a fee payer and recent blockhash.
  * @param expectedSigner - Account captured when the transaction was constructed.
  * @returns The transaction signed by the expected account.
- * @throws {WalletSigningError} If the connected account changes or does not sign the transaction.
+ * @throws {WalletSigningError} If the returned transaction is unsigned, invalid, or signed by a
+ * different account.
  */
 export async function signTransactionForWallet(
   wallet: AnchorWallet,
   transaction: Transaction,
   expectedSigner: PublicKey
 ): Promise<Transaction> {
-  if (!wallet.publicKey.equals(expectedSigner)) {
-    throw new WalletSigningError(
-      "Your connected wallet account changed. Reconnect the account that started this vote and try again."
-    );
-  }
-
   const signedTransaction = await wallet.signTransaction(transaction);
-
-  if (!wallet.publicKey.equals(expectedSigner)) {
-    throw new WalletSigningError(
-      "Your connected wallet account changed while signing. Reconnect the account that started this vote and try again."
-    );
-  }
 
   const expectedSignature = signedTransaction.signatures.find(({ publicKey }) =>
     publicKey.equals(expectedSigner)
   );
+  const unexpectedSignature = signedTransaction.signatures.find(
+    ({ publicKey, signature }) =>
+      signature !== null && !publicKey.equals(expectedSigner)
+  );
 
-  if (!expectedSignature?.signature || !signedTransaction.verifySignatures()) {
+  if (!expectedSignature?.signature && unexpectedSignature) {
+    throw new WalletSigningError(
+      "Your wallet signed with a different account than the one that started this vote. Reconnect the original account and try again."
+    );
+  }
+
+  if (!expectedSignature?.signature) {
     throw new WalletSigningError(
       "Your wallet did not sign the transaction with the connected account. Reconnect the account that started this vote and try again."
+    );
+  }
+
+  if (!signedTransaction.verifySignatures()) {
+    throw new WalletSigningError(
+      "Your wallet returned an invalid transaction signature. Reconnect the account that started this vote and try again."
     );
   }
 

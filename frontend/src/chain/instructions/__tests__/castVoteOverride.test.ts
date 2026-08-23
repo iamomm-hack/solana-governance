@@ -144,10 +144,12 @@ describe("castVoteOverride", () => {
   const wallet = walletState as unknown as AnchorWallet;
 
   function signedTransactionResponse(
-    signature: Buffer | null = Buffer.alloc(64)
+    signatures: { publicKey: PublicKey; signature: Buffer | null }[] = [
+      { publicKey: new PublicKey(SIGNER), signature: Buffer.alloc(64) },
+    ]
   ): Transaction {
     return {
-      signatures: [{ publicKey: new PublicKey(SIGNER), signature }],
+      signatures,
       verifySignatures: () => true,
       serialize: () => Buffer.alloc(0),
     } as unknown as Transaction;
@@ -374,7 +376,11 @@ describe("castVoteOverride", () => {
   });
 
   it("reports an unsigned wallet response without submitting the transaction", async () => {
-    mockSignTransaction.mockResolvedValueOnce(signedTransactionResponse(null));
+    mockSignTransaction.mockResolvedValueOnce(
+      signedTransactionResponse([
+        { publicKey: new PublicKey(SIGNER), signature: null },
+      ])
+    );
 
     await expect(castVoteOverride(params, blockchainParams)).rejects.toThrow(
       /wallet did not sign the transaction/i
@@ -382,15 +388,17 @@ describe("castVoteOverride", () => {
     expect(mockSendRawTransaction).not.toHaveBeenCalled();
   });
 
-  it("reports an account change while the wallet approval is open", async () => {
+  it("reports a returned signature from a different account", async () => {
     const otherAccount = new PublicKey(keyFromByte(12));
-    mockSignTransaction.mockImplementationOnce(async () => {
-      walletState.publicKey = otherAccount;
-      return signedTransactionResponse();
-    });
+    mockSignTransaction.mockResolvedValueOnce(
+      signedTransactionResponse([
+        { publicKey: new PublicKey(SIGNER), signature: null },
+        { publicKey: otherAccount, signature: Buffer.alloc(64) },
+      ])
+    );
 
     await expect(castVoteOverride(params, blockchainParams)).rejects.toThrow(
-      /connected wallet account changed while signing/i
+      /signed with a different account/i
     );
     expect(mockSendRawTransaction).not.toHaveBeenCalled();
   });
