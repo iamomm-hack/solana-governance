@@ -25,6 +25,7 @@ export const useSnapshotMeta = () => {
       return fetchNcnJson<NetworkMetaResponse>(url, {
         signal,
         label: "snapshot meta info",
+        resource: "snapshot-meta",
       });
     },
   });

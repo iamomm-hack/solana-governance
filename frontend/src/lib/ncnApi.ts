@@ -24,6 +24,14 @@ const RETRY_JITTER_MS = 250;
 /** Enough of an error body to identify who refused us, without shipping a whole HTML page. */
 const MAX_BODY_SNIPPET_CHARS = 200;
 
+/** Identifies the endpoint class without putting request addresses into observability data. */
+export type NcnApiResource =
+  | "snapshot-meta"
+  | "voter-summary"
+  | "vote-account-proof"
+  | "stake-account-proof";
+
+
 const hostOf = (url: string): string => {
   try {
     return new URL(url).host;
@@ -35,6 +43,8 @@ const hostOf = (url: string): string => {
 /** The API answered, but with a non-2xx status. */
 export class NcnApiHttpError extends Error {
   readonly status: number;
+  /** Endpoint class, when the caller supplies one. */
+  readonly resource?: NcnApiResource;
   /**
    * Host that actually answered. Because the router redirects, this names the verifier operator
    * that refused the request rather than the router we asked.
@@ -50,7 +60,13 @@ export class NcnApiHttpError extends Error {
       url,
       statusText,
       bodySnippet = "",
-    }: { url: string; statusText?: string; bodySnippet?: string },
+      resource,
+    }: {
+      url: string;
+      statusText?: string;
+      bodySnippet?: string;
+      resource?: NcnApiResource;
+    },
   ) {
     const host = hostOf(url);
 
@@ -61,6 +77,7 @@ export class NcnApiHttpError extends Error {
     );
     this.name = "NcnApiHttpError";
     this.status = status;
+    this.resource = resource;
     this.host = host;
     this.bodySnippet = bodySnippet;
   }
@@ -163,6 +180,8 @@ interface FetchNcnJsonOptions {
   retryDelayMs?: (retryNumber: number) => number;
   /** Human-readable name of the resource, used in error messages. */
   label: string;
+  /** Machine-readable endpoint class used to distinguish expected proof misses from other 404s. */
+  resource?: NcnApiResource;
 }
 
 interface FetchNcnJsonOnceOptions {
@@ -170,6 +189,7 @@ interface FetchNcnJsonOnceOptions {
   timeoutMs: number;
   label: string;
   losslessIntegerFields?: readonly string[];
+  resource?: NcnApiResource;
 }
 
 /**
@@ -235,6 +255,7 @@ const fetchNcnJsonOnce = async <T>(
     timeoutMs,
     label,
     losslessIntegerFields = [],
+    resource
   }: FetchNcnJsonOnceOptions,
 ): Promise<T> => {
   // Composed by hand rather than with AbortSignal.any/AbortSignal.timeout, which need
@@ -262,6 +283,7 @@ const fetchNcnJsonOnce = async <T>(
         url: response.url || url,
         statusText: response.statusText,
         bodySnippet: await readBodySnippet(response),
+        resource,
       });
     }
 
@@ -318,6 +340,7 @@ export async function fetchNcnJson<T>(
     losslessIntegerFields,
     retryDelayMs = defaultRetryDelayMs,
     label,
+    resource,
   }: FetchNcnJsonOptions,
 ): Promise<T> {
   for (let retryNumber = 0; ; retryNumber += 1) {
@@ -327,6 +350,7 @@ export async function fetchNcnJson<T>(
         timeoutMs,
         label,
         losslessIntegerFields,
+        resource,
       });
     } catch (error) {
       const failureKind = classifyNcnFailure(error);
