@@ -7,6 +7,7 @@ import {
   NcnApiHttpError,
   NCN_PROOF_NOT_FOUND_MESSAGE,
 } from "@/lib/ncnApi";
+import { WALLET_SIGNING_CANCELLED_MESSAGE } from "@/lib/walletSigning";
 
 const mockMutate = jest.fn();
 const mockUseChainVoteAccount = jest.fn();
@@ -170,6 +171,26 @@ describe("OverrideVoteModal", () => {
     });
 
     expect(toast.info).toHaveBeenCalledWith(NCN_PROOF_NOT_FOUND_MESSAGE);
+    expect(captureException).not.toHaveBeenCalled();
+  });
+
+  it("treats a dismissed wallet approval as an informational outcome without reporting Sentry", async () => {
+    render(<OverrideVoteModal {...defaultProps} />);
+
+    const submitButton = screen.getByRole("button", { name: "Cast Vote" });
+    await waitFor(() => expect(submitButton).not.toBeDisabled());
+    fireEvent.click(submitButton);
+
+    const error = new Error("Approval Denied: Popup Closed");
+    error.name = "WalletSignTransactionError";
+    const callbacks = mockMutate.mock.calls[0][1] as {
+      onError: (error: Error) => void;
+    };
+    act(() => {
+      callbacks.onError(error);
+    });
+
+    expect(toast.info).toHaveBeenCalledWith(WALLET_SIGNING_CANCELLED_MESSAGE);
     expect(captureException).not.toHaveBeenCalled();
   });
 

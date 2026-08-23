@@ -32,6 +32,10 @@ import {
   isNcnProofNotFound,
   NCN_PROOF_NOT_FOUND_MESSAGE,
 } from "@/lib/ncnApi";
+import {
+  isWalletSigningCancellation,
+  WALLET_SIGNING_CANCELLED_MESSAGE,
+} from "@/lib/walletSigning";
 
 interface OverrideVoteModalProps {
   proposalId?: string;
@@ -158,6 +162,11 @@ export function ModifyOverrideVoteModal({
   const handleError = (err: Error) => {
     if (isNcnProofNotFound(err)) {
       toast.info(NCN_PROOF_NOT_FOUND_MESSAGE);
+      setIsLoading(false);
+      return;
+    }
+    if (isWalletSigningCancellation(err)) {
+      toast.info(WALLET_SIGNING_CANCELLED_MESSAGE);
       setIsLoading(false);
       return;
     }

@@ -18,6 +18,10 @@ import { formatAddress } from "@/lib/governance/formatters";
 import { useAnchorWallet } from "@solana/wallet-adapter-react";
 import { useSupportProposal } from "@/hooks";
 import { captureException } from "@sentry/nextjs";
+import {
+  isWalletSigningCancellation,
+  WALLET_SIGNING_CANCELLED_MESSAGE,
+} from "@/lib/walletSigning";
 
 interface SupportProposalModalProps {
   proposalId?: string;
@@ -63,6 +67,11 @@ export function SupportProposalModal({
   };
 
   const handleError = (err: Error) => {
+    if (isWalletSigningCancellation(err)) {
+      toast.info(WALLET_SIGNING_CANCELLED_MESSAGE);
+      setIsLoading(false);
+      return;
+    }
     console.log("error mutating support proposal:", err);
     captureException(err);
     toast.error(`Error supporting proposalId ${proposalId}`);
