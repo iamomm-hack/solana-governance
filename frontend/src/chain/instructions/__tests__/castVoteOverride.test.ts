@@ -135,18 +135,28 @@ describe("castVoteOverride", () => {
     };
   }
 
-  const mockSignTransaction = jest.fn(async (transaction: Transaction) => {
-    void transaction;
-    return { serialize: () => Buffer.alloc(0) };
-  });
-  const wallet = {
+  const mockSignTransaction = jest.fn();
+  const walletState = {
     publicKey: new PublicKey(SIGNER),
     signTransaction: mockSignTransaction,
     signAllTransactions: jest.fn(),
-  } as unknown as AnchorWallet;
+  };
+  const wallet = walletState as unknown as AnchorWallet;
+
+  function signedTransactionResponse(
+    signature: Buffer | null = Buffer.alloc(64)
+  ): Transaction {
+    return {
+      signatures: [{ publicKey: new PublicKey(SIGNER), signature }],
+      verifySignatures: () => true,
+      serialize: () => Buffer.alloc(0),
+    } as unknown as Transaction;
+  }
 
   beforeEach(() => {
     jest.clearAllMocks();
+    walletState.publicKey = new PublicKey(SIGNER);
+    mockSignTransaction.mockResolvedValue(signedTransactionResponse());
     mockCreateProgramWithWallet.mockReturnValue(buildFakeProgram());
     mockCreateGovV1ProgramWithWallet.mockReturnValue(buildFakeGovV1Program());
     mockComputeProofCloseTimestamp.mockResolvedValue(2_000_000_000);
@@ -361,5 +371,27 @@ describe("castVoteOverride", () => {
     );
     expect(mockSignTransaction).toHaveBeenCalledTimes(1);
     expect(mockSendRawTransaction).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports an unsigned wallet response without submitting the transaction", async () => {
+    mockSignTransaction.mockResolvedValueOnce(signedTransactionResponse(null));
+
+    await expect(castVoteOverride(params, blockchainParams)).rejects.toThrow(
+      /wallet did not sign the transaction/i
+    );
+    expect(mockSendRawTransaction).not.toHaveBeenCalled();
+  });
+
+  it("reports an account change while the wallet approval is open", async () => {
+    const otherAccount = new PublicKey(keyFromByte(12));
+    mockSignTransaction.mockImplementationOnce(async () => {
+      walletState.publicKey = otherAccount;
+      return signedTransactionResponse();
+    });
+
+    await expect(castVoteOverride(params, blockchainParams)).rejects.toThrow(
+      /connected wallet account changed while signing/i
+    );
+    expect(mockSendRawTransaction).not.toHaveBeenCalled();
   });
 });

@@ -1,4 +1,4 @@
-import { PublicKey, Connection, Keypair } from "@solana/web3.js";
+import { PublicKey, Connection, Keypair, Transaction } from "@solana/web3.js";
 import { AnchorProvider, Program, BN } from "@coral-xyz/anchor";
 import idl from "@/chain/idl/svmgov_program.json";
 import govV1Idl from "@/chain/idl/gov-v1.json";
@@ -13,6 +13,56 @@ import { AnchorWallet } from "@solana/wallet-adapter-react";
 import { SvmgovProgram, GovV1 } from "../types";
 import { RPC_URLS } from "@/contexts/EndpointContext";
 import { DEFAULT_NCN_API_URL, fetchNcnJson } from "@/lib/ncnApi";
+
+/** Thrown when the wallet cannot provide the signature required by a transaction. */
+export class WalletSigningError extends Error {
+  name = "WalletSigningError";
+}
+
+/**
+ * Signs a transaction and verifies that the wallet signed for the account used to build it.
+ *
+ * Wallet extensions can switch accounts while a signing request is open. In that case, sending
+ * the returned transaction would otherwise fail later with web3.js's opaque "missing signature"
+ * serialization error.
+ *
+ * @param wallet - Wallet adapter used to sign the transaction.
+ * @param transaction - Fully constructed transaction with a fee payer and recent blockhash.
+ * @param expectedSigner - Account captured when the transaction was constructed.
+ * @returns The transaction signed by the expected account.
+ * @throws {WalletSigningError} If the connected account changes or does not sign the transaction.
+ */
+export async function signTransactionForWallet(
+  wallet: AnchorWallet,
+  transaction: Transaction,
+  expectedSigner: PublicKey
+): Promise<Transaction> {
+  if (!wallet.publicKey.equals(expectedSigner)) {
+    throw new WalletSigningError(
+      "Your connected wallet account changed. Reconnect the account that started this vote and try again."
+    );
+  }
+
+  const signedTransaction = await wallet.signTransaction(transaction);
+
+  if (!wallet.publicKey.equals(expectedSigner)) {
+    throw new WalletSigningError(
+      "Your connected wallet account changed while signing. Reconnect the account that started this vote and try again."
+    );
+  }
+
+  const expectedSignature = signedTransaction.signatures.find(({ publicKey }) =>
+    publicKey.equals(expectedSigner)
+  );
+
+  if (!expectedSignature?.signature || !signedTransaction.verifySignatures()) {
+    throw new WalletSigningError(
+      "Your wallet did not sign the transaction with the connected account. Reconnect the account that started this vote and try again."
+    );
+  }
+
+  return signedTransaction;
+}
 
 // PDA derivation functions (based on test implementation)
 export function deriveProposalPda(

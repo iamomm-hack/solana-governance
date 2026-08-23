@@ -25,6 +25,7 @@ import {
   deriveVotePda,
   getMetaMerkleProofPda,
   computeProofCloseTimestamp,
+  signTransactionForWallet,
 } from "./helpers";
 import { BN } from "@coral-xyz/anchor";
 
@@ -48,6 +49,10 @@ export async function modifyVoteOverride(
   if (!wallet || !wallet.publicKey) {
     throw new Error("Wallet not connected");
   }
+
+  // Keep the signing account stable throughout the two-transaction flow. A wallet extension can
+  // switch accounts while its approval dialog is open, in which case it cannot sign this vote.
+  const signer = wallet.publicKey;
 
   if (consensusResult === undefined) {
     throw new Error("Consensus result not defined");
@@ -141,7 +146,7 @@ export async function modifyVoteOverride(
       .accountsStrict({
         consensusResult,
         merkleProof: metaMerkleProofPda,
-        payer: wallet.publicKey,
+        payer: signer,
         systemProgram: SystemProgram.programId,
       })
       .instruction();
@@ -154,11 +159,14 @@ export async function modifyVoteOverride(
       await program.provider.connection.getLatestBlockhash("confirmed");
     const initTransaction = new Transaction();
     initTransaction.add(initMerkleInstruction);
-    initTransaction.feePayer = wallet.publicKey;
+    initTransaction.feePayer = signer;
     initTransaction.recentBlockhash = initBlockhash.blockhash;
 
-    const signedInitTransaction =
-      await wallet.signTransaction(initTransaction);
+    const signedInitTransaction = await signTransactionForWallet(
+      wallet,
+      initTransaction,
+      signer
+    );
     const initSignature =
       await program.provider.connection.sendRawTransaction(
         signedInitTransaction.serialize(),
@@ -218,7 +226,7 @@ export async function modifyVoteOverride(
       stakeMerkleLeaf
     )
     .accountsStrict({
-      signer: wallet.publicKey,
+      signer,
       splVoteAccount: splVoteAccount,
       splStakeAccount: stakeAccountPubkey,
       proposal: proposalPubkey,
@@ -234,12 +242,12 @@ export async function modifyVoteOverride(
 
   const transaction = new Transaction();
   transaction.add(modifyVoteOverrideInstruction);
-  transaction.feePayer = wallet.publicKey;
+  transaction.feePayer = signer;
   transaction.recentBlockhash = (
     await program.provider.connection.getLatestBlockhash("confirmed")
   ).blockhash;
 
-  const tx = await wallet.signTransaction(transaction);
+  const tx = await signTransactionForWallet(wallet, transaction, signer);
 
   const signature = await program.provider.connection.sendRawTransaction(
     tx.serialize(),
