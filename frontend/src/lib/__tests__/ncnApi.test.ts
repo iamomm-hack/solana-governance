@@ -2,6 +2,7 @@ import {
   classifyNcnFailure,
   fetchNcnJson,
   isNetworkFailure,
+  isNcnProofNotFound,
   isPermanentNcnFailure,
   NcnApiHttpError,
   NcnApiNetworkError,
@@ -272,6 +273,45 @@ describe("fetchNcnJson", () => {
     expect(error).toBeInstanceOf(NcnApiHttpError);
     expect((error as NcnApiHttpError).status).toBe(404);
     expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("marks a missing stake proof as an expected snapshot outcome", async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+      statusText: "Not Found",
+      url: URL_UNDER_TEST,
+      text: async () => "missing",
+    }) as unknown as typeof fetch;
+
+    const error = await fetchNcnJson(URL_UNDER_TEST, {
+      label: "stake account proof",
+      resource: "stake-account-proof",
+      retryDelayMs: () => 0,
+    }).catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(NcnApiHttpError);
+    expect((error as NcnApiHttpError).resource).toBe("stake-account-proof");
+    expect(isNcnProofNotFound(error)).toBe(true);
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not treat non-proof 404s as expected snapshot outcomes", async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+      statusText: "Not Found",
+      url: URL_UNDER_TEST,
+      text: async () => "missing",
+    }) as unknown as typeof fetch;
+
+    const error = await fetchNcnJson(URL_UNDER_TEST, {
+      label: "snapshot meta info",
+      resource: "snapshot-meta",
+      retryDelayMs: () => 0,
+    }).catch((e: unknown) => e);
+
+    expect(isNcnProofNotFound(error)).toBe(false);
   });
 
   it("does not start work when the caller's signal is already aborted", async () => {

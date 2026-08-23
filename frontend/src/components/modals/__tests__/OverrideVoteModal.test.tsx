@@ -1,8 +1,12 @@
 import React from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { PublicKey } from "@solana/web3.js";
 import { OverrideVoteModal } from "../OverrideVoteModal";
 import { WalletRole } from "@/types";
+import {
+  NcnApiHttpError,
+  NCN_PROOF_NOT_FOUND_MESSAGE,
+} from "@/lib/ncnApi";
 
 const mockMutate = jest.fn();
 const mockUseChainVoteAccount = jest.fn();
@@ -60,6 +64,7 @@ jest.mock("sonner", () => ({
   toast: {
     success: jest.fn(),
     error: jest.fn(),
+    info: jest.fn(),
   },
 }));
 
@@ -69,6 +74,10 @@ jest.mock("@sentry/nextjs", () => ({
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { useAnchorWallet } = require("@solana/wallet-adapter-react");
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { captureException } = require("@sentry/nextjs");
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { toast } = require("sonner");
 
 beforeAll(() => {
   globalThis.ResizeObserver = class ResizeObserver {
@@ -139,6 +148,29 @@ describe("OverrideVoteModal", () => {
       expect.not.objectContaining({ voteAccount: expect.anything() }),
       expect.any(Object)
     );
+  });
+
+  it("treats an absent stake proof as an informational outcome without reporting Sentry", async () => {
+    render(<OverrideVoteModal {...defaultProps} />);
+
+    const submitButton = screen.getByRole("button", { name: "Cast Vote" });
+    await waitFor(() => expect(submitButton).not.toBeDisabled());
+    fireEvent.click(submitButton);
+
+    const callbacks = mockMutate.mock.calls[0][1] as {
+      onError: (error: Error) => void;
+    };
+    act(() => {
+      callbacks.onError(
+        new NcnApiHttpError("stake account proof", 404, {
+          url: "https://verifier.example/proof/stake_account/account",
+          resource: "stake-account-proof",
+        }),
+      );
+    });
+
+    expect(toast.info).toHaveBeenCalledWith(NCN_PROOF_NOT_FOUND_MESSAGE);
+    expect(captureException).not.toHaveBeenCalled();
   });
 
   it("requires explicit confirmation before a validator-identity wallet can submit an override vote", async () => {
