@@ -31,6 +31,9 @@ export type NcnApiResource =
   | "vote-account-proof"
   | "stake-account-proof";
 
+/** User-facing explanation for a stake or vote account that has no leaf in the proposal snapshot. */
+export const NCN_PROOF_NOT_FOUND_MESSAGE =
+  "This account had no active stake in the proposal snapshot and cannot vote.";
 
 const hostOf = (url: string): string => {
   try {
@@ -82,6 +85,13 @@ export class NcnApiHttpError extends Error {
     this.bodySnippet = bodySnippet;
   }
 }
+
+/** A verifier understood a proof request, but the account is absent from that snapshot. */
+export const isNcnProofNotFound = (error: unknown): boolean =>
+  error instanceof NcnApiHttpError &&
+  error.status === 404 &&
+  (error.resource === "vote-account-proof" ||
+    error.resource === "stake-account-proof");
 
 /**
  * No readable response ever arrived: DNS/TLS failure, timeout, refused connection, or a

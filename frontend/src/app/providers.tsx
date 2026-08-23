@@ -6,6 +6,7 @@ import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persi
 import { GET_GOVERNANCE_CONFIG, GET_PROPOSAL_DOCUMENT } from "@/helpers";
 import {
   classifyNcnFailure,
+  isNcnProofNotFound,
   NcnApiHttpError,
   NcnApiNetworkError,
 } from "@/lib/ncnApi";
@@ -40,6 +41,10 @@ export const queryClient = new QueryClient({
   queryCache: new QueryCache({
     // Fires once per query after its retries are exhausted, never for cancellations.
     onError: (error, query) => {
+      // A proof endpoint uses 404 to say that this account has no leaf in the requested
+      // historical snapshot. This is an expected voting outcome, not an application error.
+      if (isNcnProofNotFound(error)) return;
+
       console.error("Query error:", error);
 
       const queryKey = String(query.queryKey[0]);

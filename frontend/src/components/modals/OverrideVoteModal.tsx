@@ -29,6 +29,10 @@ import { PublicKey } from "@solana/web3.js";
 import { VotingProposalsDropdown } from "../VotingProposalsDropdown";
 import { StakeAccountsDropdown } from "../StakeAccountsDropdown";
 import { captureException } from "@sentry/nextjs";
+import {
+  isNcnProofNotFound,
+  NCN_PROOF_NOT_FOUND_MESSAGE,
+} from "@/lib/ncnApi";
 import { Checkbox } from "@/components/ui/checkbox";
 import { hasOnChainValidatorIdentity } from "@/lib/governance/role-detection";
 
@@ -152,6 +156,11 @@ export function OverrideVoteModal({
   };
 
   const handleError = (err: Error) => {
+    if (isNcnProofNotFound(err)) {
+      toast.info(NCN_PROOF_NOT_FOUND_MESSAGE);
+      setIsLoading(false);
+      return;
+    }
     console.log("error mutating override vote:", err);
     captureException(err);
     toast.error(`Error voting for proposal ${initialProposalId}`);

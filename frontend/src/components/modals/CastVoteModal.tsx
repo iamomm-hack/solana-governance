@@ -31,6 +31,10 @@ import { VotingProposalsDropdown } from "../VotingProposalsDropdown";
 import { PublicKey } from "@solana/web3.js";
 import { captureException } from "@sentry/nextjs";
 import RequirementItem from "./shared/RequirementItem";
+import {
+  isNcnProofNotFound,
+  NCN_PROOF_NOT_FOUND_MESSAGE,
+} from "@/lib/ncnApi";
 
 export type CastVoteModalDataProps =
   | {
@@ -106,6 +110,11 @@ export function CastVoteModal({
   };
 
   const handleError = (err: Error) => {
+    if (isNcnProofNotFound(err)) {
+      toast.info(NCN_PROOF_NOT_FOUND_MESSAGE);
+      setIsLoading(false);
+      return;
+    }
     console.log("error mutating cast vote:", err);
     captureException(err);
     toast.error(`Error voting for proposal ${initialProposalId}`);
