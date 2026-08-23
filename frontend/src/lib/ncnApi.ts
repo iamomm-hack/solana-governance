@@ -12,8 +12,14 @@
 /** Default NCN API base URL. Users can override it via the settings modal (see NcnApiContext). */
 export const DEFAULT_NCN_API_URL = "https://ncn-governance.solana.com";
 
-/** The router stalls for ~20s when unhealthy; fail sooner and let React Query retry. */
+/** The router stalls for ~20s when unhealthy; fail sooner and try another routed operator. */
 const DEFAULT_TIMEOUT_MS = 10_000;
+
+/** Three retries matches React Query's former policy: four total attempts per NCN request. */
+const DEFAULT_MAX_RETRIES = 3;
+
+const MAX_RETRY_DELAY_MS = 8_000;
+const RETRY_JITTER_MS = 250;
 
 /** Enough of an error body to identify who refused us, without shipping a whole HTML page. */
 const MAX_BODY_SNIPPET_CHARS = 200;
@@ -44,14 +50,14 @@ export class NcnApiHttpError extends Error {
       url,
       statusText,
       bodySnippet = "",
-    }: { url: string; statusText?: string; bodySnippet?: string }
+    }: { url: string; statusText?: string; bodySnippet?: string },
   ) {
     const host = hostOf(url);
 
     // These endpoints are served over HTTP/2, which has no reason phrase, so statusText is
     // almost always empty. Always include the numeric status.
     super(
-      `Failed to get ${label} from ${host}: ${statusText ? `${status} ${statusText}` : status}`
+      `Failed to get ${label} from ${host}: ${statusText ? `${status} ${statusText}` : status}`,
     );
     this.name = "NcnApiHttpError";
     this.status = status;
@@ -90,7 +96,7 @@ export const isNetworkFailure = (error: unknown): boolean => {
   return (
     error instanceof TypeError &&
     /load failed|failed to fetch|fetch failed|networkerror|network request failed/i.test(
-      error.message
+      error.message,
     )
   );
 };
@@ -109,7 +115,7 @@ export type NcnFailureKind = "network" | "upstream" | "request";
  * to `UPSTREAM_STATUSES`.
  */
 export const classifyNcnFailure = (
-  error: unknown
+  error: unknown,
 ): NcnFailureKind | undefined => {
   if (isNetworkFailure(error)) return "network";
   if (!(error instanceof NcnApiHttpError)) return undefined;
@@ -149,14 +155,55 @@ interface FetchNcnJsonOptions {
    */
   signal?: AbortSignal;
   timeoutMs?: number;
+  /** Number of retries after the initial request. */
+  maxRetries?: number;
+  /** Override the backoff calculation, primarily for callers with tighter latency budgets. */
+  retryDelayMs?: (retryNumber: number) => number;
   /** Human-readable name of the resource, used in error messages. */
   label: string;
 }
 
-export async function fetchNcnJson<T>(
+interface FetchNcnJsonOnceOptions {
+  signal?: AbortSignal;
+  timeoutMs: number;
+  label: string;
+}
+
+const defaultRetryDelayMs = (retryNumber: number): number =>
+  Math.min(1000 * 2 ** retryNumber, MAX_RETRY_DELAY_MS) +
+  Math.random() * RETRY_JITTER_MS;
+
+const abortError = (): DOMException =>
+  new DOMException("The operation was aborted", "AbortError");
+
+/** Wait for the next attempt while still honoring React Query cancellation. */
+const waitForRetry = async (
+  delayMs: number,
+  signal?: AbortSignal,
+): Promise<void> => {
+  if (signal?.aborted) throw abortError();
+  if (delayMs <= 0) return;
+
+  await new Promise<void>((resolve, reject) => {
+    const onAbort = () => {
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", onAbort);
+      reject(abortError());
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, delayMs);
+
+    signal?.addEventListener("abort", onAbort);
+  });
+};
+
+/** Make one bounded request. Retry orchestration lives in `fetchNcnJson`. */
+const fetchNcnJsonOnce = async <T>(
   url: string,
-  { signal, timeoutMs = DEFAULT_TIMEOUT_MS, label }: FetchNcnJsonOptions
-): Promise<T> {
+  { signal, timeoutMs, label }: FetchNcnJsonOnceOptions,
+): Promise<T> => {
   // Composed by hand rather than with AbortSignal.any/AbortSignal.timeout, which need
   // Safari 17.4+ — and Safari users are the ones hitting these failures.
   const controller = new AbortController();
@@ -198,7 +245,7 @@ export async function fetchNcnJson<T>(
       // exception ("signal is aborted without reason") saying nothing beyond "we aborted".
       throw new NcnApiNetworkError(
         `Timed out after ${timeoutMs}ms getting ${label} from ${hostOf(url)}`,
-        url
+        url,
       );
     }
 
@@ -206,7 +253,7 @@ export async function fetchNcnJson<T>(
       throw new NcnApiNetworkError(
         `NCN API unreachable at ${hostOf(url)} while getting ${label} (network or CORS failure)`,
         url,
-        { cause: error }
+        { cause: error },
       );
     }
 
@@ -214,5 +261,38 @@ export async function fetchNcnJson<T>(
   } finally {
     clearTimeout(timer);
     signal?.removeEventListener("abort", abortFromCaller);
+  }
+};
+
+/**
+ * Fetch JSON from the NCN API with a bounded timeout and transient-failure retries.
+ *
+ * Each retry goes back through the configured base URL. With the default router, that lets the
+ * next attempt choose another operator. Definite request failures such as a 400 or 404 are returned
+ * immediately. Caller cancellation stops both an in-flight request and a pending backoff without
+ * starting another attempt.
+ */
+export async function fetchNcnJson<T>(
+  url: string,
+  {
+    signal,
+    timeoutMs = DEFAULT_TIMEOUT_MS,
+    maxRetries = DEFAULT_MAX_RETRIES,
+    retryDelayMs = defaultRetryDelayMs,
+    label,
+  }: FetchNcnJsonOptions,
+): Promise<T> {
+  for (let retryNumber = 0; ; retryNumber += 1) {
+    try {
+      return await fetchNcnJsonOnce<T>(url, { signal, timeoutMs, label });
+    } catch (error) {
+      const failureKind = classifyNcnFailure(error);
+      const shouldRetry =
+        retryNumber < maxRetries &&
+        (failureKind === "network" || failureKind === "upstream");
+
+      if (!shouldRetry || signal?.aborted) throw error;
+      await waitForRetry(retryDelayMs(retryNumber), signal);
+    }
   }
 }

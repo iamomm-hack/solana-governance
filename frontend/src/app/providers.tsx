@@ -6,7 +6,6 @@ import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persi
 import { GET_GOVERNANCE_CONFIG, GET_PROPOSAL_DOCUMENT } from "@/helpers";
 import {
   classifyNcnFailure,
-  isPermanentNcnFailure,
   NcnApiHttpError,
   NcnApiNetworkError,
 } from "@/lib/ncnApi";
@@ -31,10 +30,11 @@ export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 10,
-      // React Query's own default count, but stops early once the upstream has answered
-      // definitively — retrying a 404 only spends the user's time (see isPermanentNcnFailure).
+      // NCN requests exhaust their retries inside fetchNcnJson so mutations get the same
+      // protection without retrying an entire transaction workflow. Do not multiply those
+      // attempts here; retain React Query's former retry count for all other queries.
       retry: (failureCount, error) =>
-        failureCount < 3 && !isPermanentNcnFailure(error),
+        classifyNcnFailure(error) === undefined && failureCount < 3,
     },
   },
   queryCache: new QueryCache({
