@@ -1,5 +1,7 @@
 "use client";
 
+import type { MouseEvent } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AppButton } from "@/components/ui/AppButton";
 import { GitHubIcon } from "@/components/icons/SvgIcons";
@@ -50,6 +52,7 @@ function ProposalInfo({ proposal }: { proposal: ProposalRecord }) {
         <Link
           href={getProposalDetailPagePath(proposal.publicKey)}
           className="block"
+          onClick={(e) => e.stopPropagation()}
         >
           <h3 className="h3 whitespace-pre-wrap text-lg font-semibold tracking-tight text-white sm:text-xl hover-gradient-text transition-all duration-200">
             <ProposalHeading
@@ -67,6 +70,7 @@ function ProposalInfo({ proposal }: { proposal: ProposalRecord }) {
         variant="outline"
         size="sm"
         className="w-fit border-white/20  text-[11px] font-medium uppercase tracking-[0.1em] text-white/70 hover:bg-white/20"
+        onClick={(e: MouseEvent<HTMLButtonElement>) => e.stopPropagation()}
       >
         <Link
           href={proposal.description}
@@ -209,7 +213,10 @@ function VotingPanel({ proposal }: { proposal: ProposalRecord }) {
   const isDiscussion = proposal.status === "discussion";
 
   return (
-    <aside className="w-full glass-card p-6 lg:w-80 xl:w-80">
+    <aside
+      className="w-full glass-card p-6 lg:w-80 xl:w-80"
+      onClick={(e) => e.stopPropagation()}
+    >
       <header className="mb-6">
         <span className="block text-[11px] uppercase tracking-[0.24em] text-white/45 mb-3">
           {getHeaderLabel(proposal)}
@@ -265,8 +272,13 @@ type ExternalProposalPanelProps = {
 export default function ExternalProposalPanel({
   proposal,
 }: ExternalProposalPanelProps) {
+  const router = useRouter();
+
   return (
-    <div className="flex min-w-0 w-full flex-col gap-6 p-6 lg:flex-row lg:items-stretch xl:gap-8">
+    <div
+      className="flex min-w-0 w-full flex-col gap-6 p-6 cursor-pointer lg:flex-row lg:items-stretch xl:gap-8"
+      onClick={() => router.push(getProposalDetailPagePath(proposal.publicKey))}
+    >
       <div className="w-32 shrink-0 self-stretch flex items-center justify-center">
         <Spade className="size-15 text-muted/70 animate-pulse" />
       </div>
