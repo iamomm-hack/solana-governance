@@ -146,7 +146,8 @@ function VoteActions({
             disabled={
               disabled || consensusResult === undefined || isLoadingVoteIdentity
             }
-            onClick={() => {
+            onClick={(e) => {
+              e.stopPropagation();
               if (consensusResult && proposalId) {
                 openModal(modifyModalName, { proposalId, consensusResult });
               } else if (isLoadingVoteIdentity) {
@@ -163,7 +164,8 @@ function VoteActions({
             disabled={
               disabled || consensusResult === undefined || isLoadingVoteIdentity
             }
-            onClick={() => {
+            onClick={(e) => {
+              e.stopPropagation();
               if (consensusResult && proposalId) {
                 openModal(castModalName, { proposalId, consensusResult });
               } else if (isLoadingVoteIdentity) {
@@ -175,11 +177,13 @@ function VoteActions({
           />
         </>
       )}
-      <SupportButton
-        proposalStatus={state}
-        proposalId={proposalId}
-        disabled={disabled}
-      />
+      <div onClick={(e) => e.stopPropagation()}>
+        <SupportButton
+          proposalStatus={state}
+          proposalId={proposalId}
+          disabled={disabled}
+        />
+      </div>
     </div>
   );
 }
@@ -196,6 +200,7 @@ function DiscussionMessage({ proposalId }: { proposalId: string }) {
         asChild
         variant="outline"
         className="w-full justify-center border-white/15 bg-white/10 text-sm font-medium text-white/75 hover:text-white"
+        onClick={(e: MouseEvent<HTMLButtonElement>) => e.stopPropagation()}
       >
         <Link href={getProposalDetailPagePath(proposalId)}>
           View Details
@@ -213,10 +218,7 @@ function VotingPanel({ proposal }: { proposal: ProposalRecord }) {
   const isDiscussion = proposal.status === "discussion";
 
   return (
-    <aside
-      className="w-full glass-card p-6 lg:w-80 xl:w-80"
-      onClick={(e) => e.stopPropagation()}
-    >
+    <aside className="w-full glass-card p-6 lg:w-80 xl:w-80">
       <header className="mb-6">
         <span className="block text-[11px] uppercase tracking-[0.24em] text-white/45 mb-3">
           {getHeaderLabel(proposal)}
@@ -273,11 +275,21 @@ export default function ExternalProposalPanel({
   proposal,
 }: ExternalProposalPanelProps) {
   const router = useRouter();
+  const goToProposal = () =>
+    router.push(getProposalDetailPagePath(proposal.publicKey));
 
   return (
     <div
-      className="flex min-w-0 w-full flex-col gap-6 p-6 cursor-pointer lg:flex-row lg:items-stretch xl:gap-8"
-      onClick={() => router.push(getProposalDetailPagePath(proposal.publicKey))}
+      role="button"
+      tabIndex={0}
+      className="flex min-w-0 w-full flex-col gap-6 p-6 cursor-pointer lg:flex-row lg:items-stretch xl:gap-8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+      onClick={goToProposal}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          goToProposal();
+        }
+      }}
     >
       <div className="w-32 shrink-0 self-stretch flex items-center justify-center">
         <Spade className="size-15 text-muted/70 animate-pulse" />
