@@ -134,9 +134,7 @@ function VoteActions({
   const isVoting = state === "voting";
 
   return (
-    // data-no-card-nav: disabled buttons have pointer-events-none, so clicks
-    // on them land on this wrapper — they must not trigger card navigation
-    <div className="flex flex-col gap-3" data-no-card-nav>
+    <div className="flex flex-col gap-3">
       {isVoting && (
         <>
           <AppButton
@@ -213,7 +211,13 @@ function VotingPanel({ proposal }: { proposal: ProposalRecord }) {
   const isDiscussion = proposal.status === "discussion";
 
   return (
-    <aside className="w-full glass-card p-6 lg:w-80 xl:w-80">
+    // data-no-card-nav: the voting panel is an action area, not part of the
+    // card's click-to-navigate surface; cursor-auto undoes the card's
+    // inherited cursor-pointer so the panel doesn't look clickable
+    <aside
+      className="w-full cursor-auto glass-card p-6 lg:w-80 xl:w-80"
+      data-no-card-nav
+    >
       <header className="mb-6">
         <span className="block text-[11px] uppercase tracking-[0.24em] text-white/45 mb-3">
           {getHeaderLabel(proposal)}
@@ -273,9 +277,9 @@ export default function ExternalProposalPanel({
 
   // Whole-card click navigation is a mouse convenience; keyboard and
   // assistive-technology users navigate via the proposal title link.
-  // Clicks that originate on interactive elements (or their disabled,
-  // pointer-events-none stand-ins marked data-no-card-nav) and clicks
-  // that end a text selection are left alone.
+  // Clicks that originate on interactive elements or inside opted-out
+  // regions ([data-no-card-nav], e.g. the voting panel) and clicks that
+  // end a text selection are left alone.
   const handleCardClick = (e: MouseEvent<HTMLDivElement>) => {
     if ((e.target as HTMLElement).closest("a, button, [data-no-card-nav]")) {
       return;
