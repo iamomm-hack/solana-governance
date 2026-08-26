@@ -52,7 +52,6 @@ function ProposalInfo({ proposal }: { proposal: ProposalRecord }) {
         <Link
           href={getProposalDetailPagePath(proposal.publicKey)}
           className="block"
-          onClick={(e) => e.stopPropagation()}
         >
           <h3 className="h3 whitespace-pre-wrap text-lg font-semibold tracking-tight text-white sm:text-xl hover-gradient-text transition-all duration-200">
             <ProposalHeading
@@ -70,7 +69,6 @@ function ProposalInfo({ proposal }: { proposal: ProposalRecord }) {
         variant="outline"
         size="sm"
         className="w-fit border-white/20  text-[11px] font-medium uppercase tracking-[0.1em] text-white/70 hover:bg-white/20"
-        onClick={(e: MouseEvent<HTMLButtonElement>) => e.stopPropagation()}
       >
         <Link
           href={proposal.description}
@@ -136,7 +134,9 @@ function VoteActions({
   const isVoting = state === "voting";
 
   return (
-    <div className="flex flex-col gap-3">
+    // data-no-card-nav: disabled buttons have pointer-events-none, so clicks
+    // on them land on this wrapper — they must not trigger card navigation
+    <div className="flex flex-col gap-3" data-no-card-nav>
       {isVoting && (
         <>
           <AppButton
@@ -146,8 +146,7 @@ function VoteActions({
             disabled={
               disabled || consensusResult === undefined || isLoadingVoteIdentity
             }
-            onClick={(e) => {
-              e.stopPropagation();
+            onClick={() => {
               if (consensusResult && proposalId) {
                 openModal(modifyModalName, { proposalId, consensusResult });
               } else if (isLoadingVoteIdentity) {
@@ -164,8 +163,7 @@ function VoteActions({
             disabled={
               disabled || consensusResult === undefined || isLoadingVoteIdentity
             }
-            onClick={(e) => {
-              e.stopPropagation();
+            onClick={() => {
               if (consensusResult && proposalId) {
                 openModal(castModalName, { proposalId, consensusResult });
               } else if (isLoadingVoteIdentity) {
@@ -177,13 +175,11 @@ function VoteActions({
           />
         </>
       )}
-      <div onClick={(e) => e.stopPropagation()}>
-        <SupportButton
-          proposalStatus={state}
-          proposalId={proposalId}
-          disabled={disabled}
-        />
-      </div>
+      <SupportButton
+        proposalStatus={state}
+        proposalId={proposalId}
+        disabled={disabled}
+      />
     </div>
   );
 }
@@ -200,7 +196,6 @@ function DiscussionMessage({ proposalId }: { proposalId: string }) {
         asChild
         variant="outline"
         className="w-full justify-center border-white/15 bg-white/10 text-sm font-medium text-white/75 hover:text-white"
-        onClick={(e: MouseEvent<HTMLButtonElement>) => e.stopPropagation()}
       >
         <Link href={getProposalDetailPagePath(proposalId)}>
           View Details
@@ -275,21 +270,26 @@ export default function ExternalProposalPanel({
   proposal,
 }: ExternalProposalPanelProps) {
   const router = useRouter();
-  const goToProposal = () =>
+
+  // Whole-card click navigation is a mouse convenience; keyboard and
+  // assistive-technology users navigate via the proposal title link.
+  // Clicks that originate on interactive elements (or their disabled,
+  // pointer-events-none stand-ins marked data-no-card-nav) and clicks
+  // that end a text selection are left alone.
+  const handleCardClick = (e: MouseEvent<HTMLDivElement>) => {
+    if ((e.target as HTMLElement).closest("a, button, [data-no-card-nav]")) {
+      return;
+    }
+    if (window.getSelection()?.toString()) {
+      return;
+    }
     router.push(getProposalDetailPagePath(proposal.publicKey));
+  };
 
   return (
     <div
-      role="button"
-      tabIndex={0}
-      className="flex min-w-0 w-full flex-col gap-6 p-6 cursor-pointer lg:flex-row lg:items-stretch xl:gap-8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-      onClick={goToProposal}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          goToProposal();
-        }
-      }}
+      className="flex min-w-0 w-full flex-col gap-6 p-6 cursor-pointer lg:flex-row lg:items-stretch xl:gap-8"
+      onClick={handleCardClick}
     >
       <div className="w-32 shrink-0 self-stretch flex items-center justify-center">
         <Spade className="size-15 text-muted/70 animate-pulse" />
