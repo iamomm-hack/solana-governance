@@ -89,7 +89,7 @@ describe("computeQuorum", () => {
 });
 
 describe("computeProposalVoteStats", () => {
-  it("uses the snapshot total for participation and every vote bucket", () => {
+  it("separates vote share from participation and stake share", () => {
     const result = computeProposalVoteStats({
       forLamports: 200,
       againstLamports: 100,
@@ -97,25 +97,53 @@ describe("computeProposalVoteStats", () => {
       totalActiveStake: 1_000,
     });
 
-    expect(result).toEqual({
+    expect(result.quorum).toEqual({
       known: true,
+      totalActiveStake: 1_000,
       participationPercent: 35,
+      isMet: true,
+    });
+    expect(result.voteShare.known).toBe(true);
+    if (!result.voteShare.known) throw new Error("unreachable");
+    expect(result.voteShare.forPercent).toBeCloseTo(57.142857, 6);
+    expect(result.voteShare.againstPercent).toBeCloseTo(28.571429, 6);
+    expect(result.voteShare.abstainPercent).toBeCloseTo(14.285714, 6);
+    expect(result.stakeShare).toEqual({
+      known: true,
       forPercent: 20,
       againstPercent: 10,
       abstainPercent: 5,
-      isQuorumMet: true,
     });
   });
 
-  it("keeps all percentages unknown without the snapshot total", () => {
-    expect(
-      computeProposalVoteStats({
-        forLamports: 200,
-        againstLamports: 100,
-        abstainLamports: 50,
-        totalActiveStake: undefined,
-      }),
-    ).toEqual({ known: false });
+  it("keeps vote share available without the snapshot total", () => {
+    const result = computeProposalVoteStats({
+      forLamports: 200,
+      againstLamports: 100,
+      abstainLamports: 50,
+      totalActiveStake: undefined,
+    });
+
+    expect(result.quorum).toEqual({ known: false });
+    expect(result.voteShare.known).toBe(true);
+    expect(result.stakeShare).toEqual({ known: false });
+  });
+
+  it("reports an unknown vote share when no votes have been cast", () => {
+    const result = computeProposalVoteStats({
+      forLamports: 0,
+      againstLamports: 0,
+      abstainLamports: 0,
+      totalActiveStake: 1_000,
+    });
+
+    expect(result.voteShare).toEqual({ known: false });
+    expect(result.stakeShare).toEqual({
+      known: true,
+      forPercent: 0,
+      againstPercent: 0,
+      abstainPercent: 0,
+    });
   });
 });
 

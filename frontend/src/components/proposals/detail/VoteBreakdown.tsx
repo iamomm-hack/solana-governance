@@ -84,7 +84,7 @@ const VoteBreakdown = ({
               againstLamports={proposal.againstVotesLamports}
               abstainLamports={proposal.abstainVotesLamports}
               totalLamports={
-                voteStats?.known ? totalActiveStake : undefined
+                voteStats?.quorum.known ? totalActiveStake : undefined
               }
             />
           )}
@@ -97,7 +97,8 @@ const VoteBreakdown = ({
               Vote Breakdown
             </h4>
             <p className="text-center text-sm text-white/60 lg:text-left">
-              Current distribution of recorded votes for this proposal.
+              Share of votes cast. Hover or focus a percentage to compare it
+              with total stake.
             </p>
             {isLoading || !voteStats ? (
               <div className="mx-auto h-4 w-52 animate-pulse rounded bg-white/10 lg:mx-0" />
@@ -107,16 +108,16 @@ const VoteBreakdown = ({
                   Participation ({QUORUM_NUMERATOR}/{QUORUM_DENOMINATOR}{" "}
                   needed):{" "}
                 </span>
-                {voteStats.known ? (
+                {voteStats.quorum.known ? (
                   <span
                     className={
-                      voteStats.isQuorumMet
+                      voteStats.quorum.isMet
                         ? "text-emerald-400"
                         : "text-foreground"
                     }
                   >
-                    {voteStats.participationPercent.toFixed(2)}%
-                    {voteStats.isQuorumMet ? " — quorum met" : ""}
+                    {voteStats.quorum.participationPercent.toFixed(2)}%
+                    {voteStats.quorum.isMet ? " — quorum met" : ""}
                   </span>
                 ) : (
                   // Not "not recorded": the total may exist, just for another
@@ -143,9 +144,14 @@ const VoteBreakdown = ({
                     formatLamportsDisplay(proposal.forVotesLamports).value
                   }
                   percentage={
-                    voteStats?.known
-                      ? formatPercentage(voteStats.forPercent, 2)
+                    voteStats?.voteShare.known
+                      ? formatPercentage(voteStats.voteShare.forPercent, 2)
                       : UNKNOWN_PERCENTAGE
+                  }
+                  stakePercentage={
+                    voteStats?.stakeShare.known
+                      ? `${voteStats.stakeShare.forPercent.toFixed(2)}%`
+                      : undefined
                   }
                   color="bg-primary"
                 />
@@ -155,9 +161,14 @@ const VoteBreakdown = ({
                     formatLamportsDisplay(proposal.againstVotesLamports).value
                   }
                   percentage={
-                    voteStats?.known
-                      ? formatPercentage(voteStats.againstPercent, 2)
+                    voteStats?.voteShare.known
+                      ? formatPercentage(voteStats.voteShare.againstPercent, 2)
                       : UNKNOWN_PERCENTAGE
+                  }
+                  stakePercentage={
+                    voteStats?.stakeShare.known
+                      ? `${voteStats.stakeShare.againstPercent.toFixed(2)}%`
+                      : undefined
                   }
                   color="bg-destructive"
                 />
@@ -167,9 +178,14 @@ const VoteBreakdown = ({
                     formatLamportsDisplay(proposal.abstainVotesLamports).value
                   }
                   percentage={
-                    voteStats?.known
-                      ? formatPercentage(voteStats.abstainPercent, 2)
+                    voteStats?.voteShare.known
+                      ? formatPercentage(voteStats.voteShare.abstainPercent, 2)
                       : UNKNOWN_PERCENTAGE
+                  }
+                  stakePercentage={
+                    voteStats?.stakeShare.known
+                      ? `${voteStats.stakeShare.abstainPercent.toFixed(2)}%`
+                      : undefined
                   }
                   color="bg-white/30"
                 />

@@ -52,8 +52,9 @@ function ParticipationCell({
   }
 
   const stats = getVoteStats(proposal, snapshotMeta);
+  const { quorum } = stats;
 
-  if (!stats.known) {
+  if (!quorum.known) {
     return (
       <div className="flex flex-col items-center gap-1 text-white/40">
         <span className="text-sm font-semibold tabular-nums">—</span>
@@ -66,13 +67,13 @@ function ParticipationCell({
     <div className="flex flex-col items-center gap-1 tabular-nums">
       <span
         className={`text-sm font-semibold ${
-          stats.isQuorumMet ? "text-primary" : "text-white/80"
+          quorum.isMet ? "text-primary" : "text-white/80"
         }`}
       >
-        {stats.participationPercent.toFixed(2)}%
+        {quorum.participationPercent.toFixed(2)}%
       </span>
       <span className="text-[10px] text-white/40">
-        {stats.isQuorumMet ? "Quorum met" : "of total stake"}
+        {quorum.isMet ? "Quorum met" : "of total stake"}
       </span>
     </div>
   );
@@ -102,15 +103,13 @@ const VOTE_SEGMENTS = [
 function VoteBreakdownCell({
   proposal,
   snapshotMeta,
-  isLoadingSnapshotMeta,
-}: ProposalColumnsOptions & { proposal: ProposalRecord }) {
-  if (isLoadingSnapshotMeta) {
-    return <VoteStatsLoadingCell width="w-40" />;
-  }
-
+}: Pick<ProposalColumnsOptions, "snapshotMeta"> & {
+  proposal: ProposalRecord;
+}) {
   const stats = getVoteStats(proposal, snapshotMeta);
+  const { voteShare } = stats;
 
-  if (!stats.known) {
+  if (!voteShare.known) {
     return <span className="text-sm font-semibold text-white/40">—</span>;
   }
 
@@ -118,14 +117,14 @@ function VoteBreakdownCell({
     <div className="mx-auto min-w-48 max-w-56 space-y-2 tabular-nums">
       <div
         className="flex h-1.5 overflow-hidden rounded-full bg-white/8"
-        aria-label={`For ${stats.forPercent.toFixed(2)}%, Against ${stats.againstPercent.toFixed(2)}%, Abstain ${stats.abstainPercent.toFixed(2)}%`}
+        aria-label={`Share of votes cast: For ${voteShare.forPercent.toFixed(2)}%, Against ${voteShare.againstPercent.toFixed(2)}%, Abstain ${voteShare.abstainPercent.toFixed(2)}%`}
         role="img"
       >
         {VOTE_SEGMENTS.map((segment) => (
           <span
             key={segment.key}
             className={segment.barClassName}
-            style={{ width: `${stats[segment.key]}%` }}
+            style={{ width: `${voteShare[segment.key]}%` }}
           />
         ))}
       </div>
@@ -143,7 +142,7 @@ function VoteBreakdownCell({
               {segment.label}
             </span>
             <span className="font-medium text-white/75">
-              {stats[segment.key].toFixed(2)}%
+              {voteShare[segment.key].toFixed(2)}%
             </span>
           </span>
         ))}
@@ -221,7 +220,9 @@ export function getProposalColumns({
       id: "participation",
       accessorFn: (row) => {
         const stats = getVoteStats(row, snapshotMeta);
-        return stats.known ? stats.participationPercent : null;
+        return stats.quorum.known
+          ? stats.quorum.participationPercent
+          : null;
       },
       header: ({ column }) => (
         <SortableHeaderButton column={column} label="Participation" />
@@ -241,7 +242,6 @@ export function getProposalColumns({
         <VoteBreakdownCell
           proposal={row.original}
           snapshotMeta={snapshotMeta}
-          isLoadingSnapshotMeta={isLoadingSnapshotMeta}
         />
       ),
     },
