@@ -14,7 +14,7 @@ import {
 } from "@tanstack/react-table";
 import { Check, ChevronDown } from "lucide-react";
 
-import { columns } from "./Columns";
+import { getProposalColumns } from "./Columns";
 import {
   Table,
   TableBody,
@@ -35,6 +35,7 @@ import { AppButton } from "@/components/ui/AppButton";
 import ExternalProposalPanel from "./ExternalProposalPanel";
 import { ProposalStatus } from "@/types";
 import { useProposals } from "@/hooks";
+import { useSnapshotMeta } from "@/hooks/useSnapshotMeta";
 import {
   Fragment,
   useCallback,
@@ -43,8 +44,6 @@ import {
   useRef,
   useState,
 } from "react";
-
-const TABLE_COLUMNS = columns;
 
 type StatusFilter = "all" | ProposalStatus;
 
@@ -77,8 +76,15 @@ export default function ProposalsTable({ title }: { title: string }) {
   const [showEligibleOnly, setShowEligibleOnly] = useState(false);
 
   const { data: proposalsData, isLoading: isLoadingProposals } = useProposals();
+  const { data: snapshotMeta, isLoading: isLoadingSnapshotMeta } =
+    useSnapshotMeta();
 
   const data = useMemo(() => proposalsData || [], [proposalsData]);
+  const tableColumns = useMemo(
+    () =>
+      getProposalColumns({ snapshotMeta, isLoadingSnapshotMeta }),
+    [snapshotMeta, isLoadingSnapshotMeta],
+  );
 
   // Rows expand independently: opening one leaves the others as they are.
   const handleRowToggle = useCallback((rowId: string) => {
@@ -109,7 +115,7 @@ export default function ProposalsTable({ title }: { title: string }) {
 
   const table = useReactTable({
     data,
-    columns: TABLE_COLUMNS,
+    columns: tableColumns,
     state: {
       sorting,
       columnFilters,
@@ -221,7 +227,7 @@ export default function ProposalsTable({ title }: { title: string }) {
         </div>
       </div>
       <div className="overflow-hidden rounded-2xl border border-white/10 glass-card">
-        <Table>
+        <Table className="min-w-[1280px]">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id} className="hover:bg-transparent">

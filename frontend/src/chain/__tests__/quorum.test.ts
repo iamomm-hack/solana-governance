@@ -1,4 +1,5 @@
 import {
+  computeProposalVoteStats,
   computeQuorum,
   QUORUM_DENOMINATOR,
   QUORUM_NUMERATOR,
@@ -84,6 +85,37 @@ describe("computeQuorum", () => {
     if (!result.known) throw new Error("unreachable");
     expect(result.participationPercent).toBeCloseTo(87.5, 9);
     expect(result.isMet).toBe(true);
+  });
+});
+
+describe("computeProposalVoteStats", () => {
+  it("uses the snapshot total for participation and every vote bucket", () => {
+    const result = computeProposalVoteStats({
+      forLamports: 200,
+      againstLamports: 100,
+      abstainLamports: 50,
+      totalActiveStake: 1_000,
+    });
+
+    expect(result).toEqual({
+      known: true,
+      participationPercent: 35,
+      forPercent: 20,
+      againstPercent: 10,
+      abstainPercent: 5,
+      isQuorumMet: true,
+    });
+  });
+
+  it("keeps all percentages unknown without the snapshot total", () => {
+    expect(
+      computeProposalVoteStats({
+        forLamports: 200,
+        againstLamports: 100,
+        abstainLamports: 50,
+        totalActiveStake: undefined,
+      }),
+    ).toEqual({ known: false });
   });
 });
 

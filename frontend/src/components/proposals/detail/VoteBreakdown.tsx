@@ -12,7 +12,7 @@ import {
 import { useHasUserVoted } from "@/hooks";
 import { useSnapshotMeta } from "@/hooks/useSnapshotMeta";
 import {
-  computeQuorum,
+  computeProposalVoteStats,
   QUORUM_DENOMINATOR,
   QUORUM_NUMERATOR,
   resolveQuorumDenominator,
@@ -54,10 +54,10 @@ const VoteBreakdown = ({
     proposal?.snapshotSlot,
   );
 
-  const quorum = useMemo(
+  const voteStats = useMemo(
     () =>
       proposal
-        ? computeQuorum({
+        ? computeProposalVoteStats({
             forLamports: proposal.forVotesLamports,
             againstLamports: proposal.againstVotesLamports,
             abstainLamports: proposal.abstainVotesLamports,
@@ -66,21 +66,6 @@ const VoteBreakdown = ({
         : undefined,
     [proposal, totalActiveStake],
   );
-
-  // `undefined` when the denominator is unknown, so the percentages render as
-  // "—" rather than a "0.00%" that looks like a real tally.
-  const votePercentages = useMemo(() => {
-    if (!proposal || !quorum?.known) {
-      return undefined;
-    }
-
-    const total = quorum.totalActiveStake;
-    return {
-      forVotesPercentage: (proposal.forVotesLamports / total) * 100,
-      againstVotesPercentage: (proposal.againstVotesLamports / total) * 100,
-      abstainVotesPercentage: (proposal.abstainVotesLamports / total) * 100,
-    };
-  }, [proposal, quorum]);
 
   const isLoading = isLoadingParent || isLoadingHasUserVoted || isLoadingMeta;
 
@@ -99,7 +84,7 @@ const VoteBreakdown = ({
               againstLamports={proposal.againstVotesLamports}
               abstainLamports={proposal.abstainVotesLamports}
               totalLamports={
-                quorum?.known ? quorum.totalActiveStake : undefined
+                voteStats?.known ? totalActiveStake : undefined
               }
             />
           )}
@@ -114,7 +99,7 @@ const VoteBreakdown = ({
             <p className="text-center text-sm text-white/60 lg:text-left">
               Current distribution of recorded votes for this proposal.
             </p>
-            {isLoading || !quorum ? (
+            {isLoading || !voteStats ? (
               <div className="mx-auto h-4 w-52 animate-pulse rounded bg-white/10 lg:mx-0" />
             ) : (
               <p className="text-center text-sm lg:text-left">
@@ -122,14 +107,16 @@ const VoteBreakdown = ({
                   Participation ({QUORUM_NUMERATOR}/{QUORUM_DENOMINATOR}{" "}
                   needed):{" "}
                 </span>
-                {quorum.known ? (
+                {voteStats.known ? (
                   <span
                     className={
-                      quorum.isMet ? "text-emerald-400" : "text-foreground"
+                      voteStats.isQuorumMet
+                        ? "text-emerald-400"
+                        : "text-foreground"
                     }
                   >
-                    {quorum.participationPercent.toFixed(2)}%
-                    {quorum.isMet ? " — quorum met" : ""}
+                    {voteStats.participationPercent.toFixed(2)}%
+                    {voteStats.isQuorumMet ? " — quorum met" : ""}
                   </span>
                 ) : (
                   // Not "not recorded": the total may exist, just for another
@@ -156,8 +143,8 @@ const VoteBreakdown = ({
                     formatLamportsDisplay(proposal.forVotesLamports).value
                   }
                   percentage={
-                    votePercentages
-                      ? formatPercentage(votePercentages.forVotesPercentage, 2)
+                    voteStats?.known
+                      ? formatPercentage(voteStats.forPercent, 2)
                       : UNKNOWN_PERCENTAGE
                   }
                   color="bg-primary"
@@ -168,11 +155,8 @@ const VoteBreakdown = ({
                     formatLamportsDisplay(proposal.againstVotesLamports).value
                   }
                   percentage={
-                    votePercentages
-                      ? formatPercentage(
-                          votePercentages.againstVotesPercentage,
-                          2,
-                        )
+                    voteStats?.known
+                      ? formatPercentage(voteStats.againstPercent, 2)
                       : UNKNOWN_PERCENTAGE
                   }
                   color="bg-destructive"
@@ -183,11 +167,8 @@ const VoteBreakdown = ({
                     formatLamportsDisplay(proposal.abstainVotesLamports).value
                   }
                   percentage={
-                    votePercentages
-                      ? formatPercentage(
-                          votePercentages.abstainVotesPercentage,
-                          2,
-                        )
+                    voteStats?.known
+                      ? formatPercentage(voteStats.abstainPercent, 2)
                       : UNKNOWN_PERCENTAGE
                   }
                   color="bg-white/30"

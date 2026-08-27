@@ -37,6 +37,18 @@ export type QuorumStatus =
       isMet: boolean;
     };
 
+/** Vote percentages measured against the proposal's frozen snapshot stake. */
+export type ProposalVoteStats =
+  | { known: false }
+  | {
+      known: true;
+      participationPercent: number;
+      forPercent: number;
+      againstPercent: number;
+      abstainPercent: number;
+      isQuorumMet: boolean;
+    };
+
 export function computeQuorum({
   forLamports,
   againstLamports,
@@ -60,6 +72,33 @@ export function computeQuorum({
     isMet:
       participatingLamports >=
       (totalActiveStake * QUORUM_NUMERATOR) / QUORUM_DENOMINATOR,
+  };
+}
+
+/**
+ * Computes the participation and vote breakdown percentages shown for a proposal.
+ *
+ * All values share the proposal's frozen snapshot stake as their denominator, so
+ * list and detail views cannot drift apart as live network stake changes.
+ */
+export function computeProposalVoteStats(
+  input: QuorumInput,
+): ProposalVoteStats {
+  const quorum = computeQuorum(input);
+
+  if (!quorum.known) {
+    return { known: false };
+  }
+
+  const { totalActiveStake } = quorum;
+
+  return {
+    known: true,
+    participationPercent: quorum.participationPercent,
+    forPercent: (input.forLamports / totalActiveStake) * 100,
+    againstPercent: (input.againstLamports / totalActiveStake) * 100,
+    abstainPercent: (input.abstainLamports / totalActiveStake) * 100,
+    isQuorumMet: quorum.isMet,
   };
 }
 
