@@ -115,7 +115,7 @@ function VoteBreakdownCell({
   }
 
   return (
-    <div className="mx-auto min-w-60 max-w-64 space-y-2 tabular-nums">
+    <div className="mx-auto min-w-48 max-w-56 space-y-2 tabular-nums">
       <div
         className="flex h-1.5 overflow-hidden rounded-full bg-white/8"
         aria-label={`For ${stats.forPercent.toFixed(2)}%, Against ${stats.againstPercent.toFixed(2)}%, Abstain ${stats.abstainPercent.toFixed(2)}%`}
@@ -133,13 +133,18 @@ function VoteBreakdownCell({
         {VOTE_SEGMENTS.map((segment) => (
           <span
             key={segment.key}
-            className="inline-flex items-center justify-center gap-1 whitespace-nowrap"
+            className="flex flex-col items-center gap-0.5 whitespace-nowrap"
           >
-            <span
-              className={`size-1.5 rounded-full ${segment.dotClassName}`}
-              aria-hidden
-            />
-            {segment.label} {stats[segment.key].toFixed(2)}%
+            <span className="inline-flex items-center gap-1">
+              <span
+                className={`size-1.5 rounded-full ${segment.dotClassName}`}
+                aria-hidden
+              />
+              {segment.label}
+            </span>
+            <span className="font-medium text-white/75">
+              {stats[segment.key].toFixed(2)}%
+            </span>
           </span>
         ))}
       </div>
@@ -188,30 +193,21 @@ export function getProposalColumns({
       cell: ({ row }) => <LifecycleIndicator status={row.original.status} />,
     },
     {
-      accessorKey: "startEpoch",
+      id: "votingPeriod",
+      accessorFn: (row) => row.startEpoch,
       header: ({ column }) => (
-        <SortableHeaderButton column={column} label="Voting Start" />
+        <SortableHeaderButton column={column} label="Voting Period" />
       ),
       cell: ({ row }) => {
-        const value = row.original.startEpoch;
-        return (
-          <span className="text-sm font-medium text-white/60">
-            {value || "-"}
-          </span>
-        );
-      },
-    },
-    {
-      accessorKey: "endEpoch",
-      header: ({ column }) => (
-        <SortableHeaderButton column={column} label="Voting Through" />
-      ),
-      cell: ({ row }) => {
+        const { startEpoch, endEpoch } = row.original;
         const value =
-          row.original.endEpoch > 0 ? row.original.endEpoch - 1 : null;
+          startEpoch > 0 && endEpoch > 0
+            ? `${startEpoch} - ${endEpoch - 1}`
+            : "-";
+
         return (
-          <span className="text-sm font-medium text-white/60">
-            {value ?? "-"}
+          <span className="text-sm font-medium text-white/60 tabular-nums">
+            {value}
           </span>
         );
       },

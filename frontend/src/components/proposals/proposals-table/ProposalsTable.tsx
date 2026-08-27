@@ -227,7 +227,7 @@ export default function ProposalsTable({ title }: { title: string }) {
         </div>
       </div>
       <div className="overflow-hidden rounded-2xl border border-white/10 glass-card">
-        <Table className="min-w-[1280px]">
+        <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id} className="hover:bg-transparent">
@@ -301,7 +301,7 @@ export default function ProposalsTable({ title }: { title: string }) {
                     {row.getVisibleCells().map((cell) => (
                       <TableCell
                         key={cell.id}
-                        className={`py-5 px-6 ${
+                        className={`px-4 py-5 ${
                           cell.column.id === "proposalRef"
                             ? "text-left"
                             : "text-center"
