@@ -15,7 +15,7 @@ export function useGovernanceConfig() {
   return useQuery<GovernanceConfigDto>({
     queryKey: [GET_GOVERNANCE_CONFIG, network],
     queryFn: async ({ signal }) => {
-      const params = new URLSearchParams({ endpoint: network });
+      const params = new URLSearchParams({ network: network });
       const res = await fetch(`/api/governance/config?${params.toString()}`, {
         signal,
       });

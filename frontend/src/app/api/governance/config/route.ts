@@ -8,16 +8,16 @@ import type { RpcNetwork } from "@/types";
 const REVALIDATE_SECONDS = 3600; // 1 hour
 
 const governanceConfigQuerySchema = z.object({
-  endpoint: z.enum(["mainnet", "testnet", "devnet"]).default("mainnet"),
+  network: z.enum(["mainnet", "testnet", "devnet"]).default("mainnet"),
 });
 
-async function getCachedGovernanceConfig(endpoint: RpcNetwork) {
+async function getCachedGovernanceConfig(network: RpcNetwork) {
   // Remote: in-memory cache doesn't persist across serverless requests; remote gives shared cache and fewer RPC hits.
-  // Cache key includes endpoint so mainnet/testnet/devnet have separate entries.
+  // Cache key includes network so mainnet/testnet/devnet have separate entries.
   "use cache: remote";
-  cacheTag("governance-config", endpoint);
+  cacheTag("governance-config", network);
   cacheLife({ revalidate: REVALIDATE_SECONDS });
-  const rpcUrl = getRpcUrlForEndpoint(endpoint, process.env as RpcEnvSource);
+  const rpcUrl = getRpcUrlForEndpoint(network, process.env as RpcEnvSource);
   return fetchGovernanceConfigFromChain(rpcUrl);
 }
 
@@ -30,20 +30,20 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const parsed = governanceConfigQuerySchema.safeParse({
-      endpoint: searchParams.get("endpoint") ?? "mainnet",
+      endpoint: searchParams.get("network") ?? "mainnet",
     });
 
     if (!parsed.success) {
       const flat = parsed.error.flatten();
       const message =
-        flat.fieldErrors.endpoint?.[0] ??
+        flat.fieldErrors.network?.[0] ??
         flat.formErrors[0] ??
         parsed.error.message;
       return NextResponse.json({ error: message }, { status: 400 });
     }
 
-    const { endpoint } = parsed.data;
-    const config = await getCachedGovernanceConfig(endpoint);
+    const { network } = parsed.data;
+    const config = await getCachedGovernanceConfig(network);
     return NextResponse.json(config);
   } catch (e) {
     // Do not return or log an upstream message: fetch libraries may include the
