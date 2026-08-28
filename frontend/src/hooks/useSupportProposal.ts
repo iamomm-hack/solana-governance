@@ -2,16 +2,14 @@ import { SupportProposalParams } from "@/chain";
 import { useEndpoint } from "@/contexts/EndpointContext";
 import { useGovernanceConfigContext } from "@/contexts/GovernanceConfigContext";
 import { supportProposalMutation } from "@/data";
-import {
-  SNAPSHOT_SLOT_UNSET_MESSAGE,
-  requireKnownSnapshotNetwork,
-} from "@/lib/snapshotNetwork";
 import { useMutation } from "@tanstack/react-query";
 import { useSnapshotMeta } from "./useSnapshotMeta";
 import { useChainVoteAccount } from "./useChainVoteAccount";
 
+const SNAPSHOT_SLOT_UNSET_MESSAGE = "No snapshot slot has been set yet";
+
 export function useSupportProposal(userPubKey: string | undefined) {
-  const { endpointUrl: endpoint, network } = useEndpoint();
+  const { endpointUrl: endpoint, endpointType } = useEndpoint();
   const governanceConfigQuery = useGovernanceConfigContext();
   const { data: meta } = useSnapshotMeta();
   const { data: chainVoteAccount } = useChainVoteAccount(userPubKey);
@@ -34,7 +32,7 @@ export function useSupportProposal(userPubKey: string | undefined) {
         params,
         {
           endpoint,
-          network: requireKnownSnapshotNetwork(network),
+          network: endpointType,
         },
         meta.slot,
         chainVoteAccount || undefined,

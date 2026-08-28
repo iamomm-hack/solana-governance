@@ -16,8 +16,6 @@ import { getRpcProxyUrl } from "@/lib/getRpcProxyUrl";
 interface EndpointContextType {
   endpointType: RPCEndpoint;
   endpointUrl: string;
-  network: RPCEndpoint;
-  isResolvingNetwork: false;
   setEndpoint: (type: RPCEndpoint) => void;
   resetToDefault: () => void;
 }
@@ -92,8 +90,6 @@ export function EndpointProvider({ children }: { children: ReactNode }) {
       value={{
         endpointType,
         endpointUrl,
-        network: endpointType,
-        isResolvingNetwork: false,
         setEndpoint,
         resetToDefault,
       }}

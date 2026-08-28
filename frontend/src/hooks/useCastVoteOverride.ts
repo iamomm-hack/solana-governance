@@ -2,12 +2,11 @@ import { CastVoteOverrideParams } from "@/chain";
 import { useEndpoint } from "@/contexts/EndpointContext";
 import { useNcnApi } from "@/contexts/NcnApiContext";
 import { castVoteOverrideMutation } from "@/data";
-import { requireKnownSnapshotNetwork } from "@/lib/snapshotNetwork";
 import { useMutation } from "@tanstack/react-query";
 import { track } from "@vercel/analytics";
 
 export function useCastVoteOverride() {
-  const { endpointUrl: endpoint, network } = useEndpoint();
+  const { endpointUrl: endpoint, endpointType } = useEndpoint();
   const { ncnApiUrl } = useNcnApi();
 
   return useMutation({
@@ -15,7 +14,7 @@ export function useCastVoteOverride() {
     mutationFn: (params: CastVoteOverrideParams) =>
       castVoteOverrideMutation(params, {
         endpoint,
-        network: requireKnownSnapshotNetwork(network),
+        network: endpointType,
         ncnApiUrl,
       }),
     onMutate: (params) => {

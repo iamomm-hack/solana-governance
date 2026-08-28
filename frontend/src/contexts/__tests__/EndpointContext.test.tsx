@@ -29,11 +29,9 @@ describe("EndpointProvider", () => {
     const { result } = renderHook(() => useEndpoint(), { wrapper });
 
     expect(result.current.endpointType).toBe("mainnet");
-    expect(result.current.network).toBe("mainnet");
     expect(result.current.endpointUrl).toBe(
       "http://localhost/api/rpc?cluster=mainnet",
     );
-    expect(result.current.isResolvingNetwork).toBe(false);
   });
 
   it("switches clusters without accepting or storing an upstream URL", () => {

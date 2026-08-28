@@ -1,13 +1,13 @@
 import { VoterSummaryResponse } from "@/chain";
 import { DEFAULT_NCN_API_URL, fetchNcnJson } from "@/lib/ncnApi";
-import type { KnownSnapshotNetwork } from "@/lib/snapshotNetwork";
+import type { RPCEndpoint } from "@/types";
 
 export const getVoterWalletSummary = async (
-  network: KnownSnapshotNetwork,
+  network: RPCEndpoint,
   walletAddress: string | undefined,
   slot: number,
   ncnApiUrl?: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<VoterSummaryResponse> => {
   if (walletAddress === undefined) throw new Error("Wallet not connected");
 
