@@ -8,11 +8,11 @@
 
 ## Vote breakdown
 
-Amounts are in SOL. Percentages are stake-weighted within each voter class. See the reusable [postmortem skill](../.agents/skills/sf-add-svmgov-postmortem/SKILL.md#accounting-methodology).
+Amounts are in SOL. Percentages show the for/against/abstain share within each source row. See the reusable [postmortem skill](../.agents/skills/sf-add-svmgov-postmortem/SKILL.md#accounting-methodology).
 
 | Source | For (SOL) | Against (SOL) | Abstain (SOL) |
 | --- | ---: | ---: | ---: |
-| Total | 142,844,091.640457514 | 50,145,585.297607565 | 72,025,072.032084863 |
+| Total | 142,844,091.640457514 (53.9004%) | 50,145,585.297607565 (18.9218%) | 72,025,072.032084863 (27.1778%) |
 | Validators | 132,201,435.497254708 (52.0312%) | 50,074,928.969498304 (19.7083%) | 71,804,619.189970660 (28.2605%) |
 | Staker overrides | 10,642,656.143202806 (97.3375%) | 70,656.328109261 (0.6462%) | 220,452.842114203 (2.0163%) |
 

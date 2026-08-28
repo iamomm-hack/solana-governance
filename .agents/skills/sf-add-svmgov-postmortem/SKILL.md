@@ -47,7 +47,8 @@ Requires the `svmgov` CLI, Solana mainnet RPC access, and the Solana MCP server.
    - Staker-override for, against, abstain, and stake.
    - Validator and staker account counts.
 
-6. Calculate category percentages within each voter class:
+6. Calculate category percentages within each source row:
+   - Total category percentage = category proposal lamports / total proposal vote lamports.
    - Validator category percentage = category validator lamports / total effective validator vote lamports.
    - Staker category percentage = category override lamports / total staker override vote lamports.
    - Validator vote overridden = total `Vote.override_lamports` / total `Vote.stake`.
@@ -97,6 +98,8 @@ Program ID: `govYkyQ3ePtGULAtY6V75qjWE8UH4vCUVQ1W4HdCAZU`
 
 The proposal account stores combined totals. A validator `Vote` stores only the validator's effective category amounts after stake overrides. Each `VoteOverride` stores the staker's replacement category amounts.
 
+For total, validator, and staker-override rows, calculate each category percentage against the sum of the for, against, and abstain amounts in that same row. This makes every row an independent vote-share breakdown.
+
 For every category:
 
 ```text
@@ -122,11 +125,11 @@ Integer basis-point distribution can leave a few lamports between raw stake and 
 
 ## Vote breakdown
 
-Amounts are in SOL. Percentages are stake-weighted within each voter class. See the shared [methodology](../.agents/skills/sf-add-svmgov-postmortem/SKILL.md#accounting-methodology).
+Amounts are in SOL. Percentages show the for/against/abstain share within each source row. See the shared [methodology](../.agents/skills/sf-add-svmgov-postmortem/SKILL.md#accounting-methodology).
 
 | Source | For (SOL) | Against (SOL) | Abstain (SOL) |
 | --- | ---: | ---: | ---: |
-| Total | <TOTAL_FOR> | <TOTAL_AGAINST> | <TOTAL_ABSTAIN> |
+| Total | <TOTAL_FOR> (<PERCENT>%) | <TOTAL_AGAINST> (<PERCENT>%) | <TOTAL_ABSTAIN> (<PERCENT>%) |
 | Validators | <VALIDATOR_FOR> (<PERCENT>%) | <VALIDATOR_AGAINST> (<PERCENT>%) | <VALIDATOR_ABSTAIN> (<PERCENT>%) |
 | Staker overrides | <STAKER_FOR> (<PERCENT>%) | <STAKER_AGAINST> (<PERCENT>%) | <STAKER_ABSTAIN> (<PERCENT>%) |
 
@@ -139,7 +142,7 @@ Account reconciliation: <VALIDATOR_COUNT> validator votes + <STAKER_COUNT> stake
 
 - Confirm each proposal total exactly equals validator plus staker override lamports for the same category.
 - Confirm validator account count plus staker override account count equals the proposal vote count.
-- Confirm each voter class's three displayed percentages sum to 100% within four-decimal rounding tolerance.
+- Confirm the Total, Validators, and Staker overrides rows each have three displayed percentages that sum to 100% within four-decimal rounding tolerance.
 - Confirm every SOL value round-trips to the original lamport integer.
 - Confirm the proposal status and query date are explicit.
 - Run `git diff --check` on the new postmortem.
