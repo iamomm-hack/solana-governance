@@ -2,10 +2,8 @@ import { cacheLife, cacheTag } from "next/cache";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { fetchGovernanceConfigFromChain } from "@/lib/getGovernanceConfig";
-import {
-  getRpcUrlForEndpoint,
-  type RpcEnvSource,
-} from "@/lib/getRpcUrls";
+import { getRpcUrlForEndpoint, type RpcEnvSource } from "@/lib/getRpcUrls";
+import type { RPCEndpoint } from "@/types";
 
 const REVALIDATE_SECONDS = 3600; // 1 hour
 
@@ -13,12 +11,13 @@ const governanceConfigQuerySchema = z.object({
   endpoint: z.enum(["mainnet", "testnet", "devnet"]).default("mainnet"),
 });
 
-async function getCachedGovernanceConfig(rpcUrl: string, cacheKey: string) {
+async function getCachedGovernanceConfig(endpoint: RPCEndpoint) {
   // Remote: in-memory cache doesn't persist across serverless requests; remote gives shared cache and fewer RPC hits.
-  // Cache key includes network so mainnet/testnet/devnet have separate entries.
+  // Cache key includes endpoint so mainnet/testnet/devnet have separate entries.
   "use cache: remote";
-  cacheTag("governance-config", cacheKey);
+  cacheTag("governance-config", endpoint);
   cacheLife({ revalidate: REVALIDATE_SECONDS });
+  const rpcUrl = getRpcUrlForEndpoint(endpoint, process.env as RpcEnvSource);
   return fetchGovernanceConfigFromChain(rpcUrl);
 }
 
@@ -44,13 +43,17 @@ export async function GET(request: NextRequest) {
     }
 
     const { endpoint } = parsed.data;
-    const env = process.env as RpcEnvSource;
-    const rpcUrl = getRpcUrlForEndpoint(endpoint, env);
-    const config = await getCachedGovernanceConfig(rpcUrl, endpoint);
+    const config = await getCachedGovernanceConfig(endpoint);
     return NextResponse.json(config);
   } catch (e) {
-    const message =
-      e instanceof Error ? e.message : "Failed to fetch governance config";
-    return NextResponse.json({ error: message }, { status: 500 });
+    // Do not return or log an upstream message: fetch libraries may include the
+    // credential-bearing RPC URL in it.
+    console.error("Failed to fetch governance config", {
+      errorName: e instanceof Error ? e.name : "UnknownError",
+    });
+    return NextResponse.json(
+      { error: "Failed to fetch governance config" },
+      { status: 500 },
+    );
   }
 }
