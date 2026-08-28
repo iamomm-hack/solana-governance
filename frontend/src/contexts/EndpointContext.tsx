@@ -9,6 +9,7 @@ import React, {
   type ReactNode,
 } from "react";
 import { setTag } from "@sentry/nextjs";
+import { useQueryClient } from "@tanstack/react-query";
 import type { RPCEndpoint } from "@/types";
 import { getRpcProxyUrl } from "@/lib/getRpcProxyUrl";
 
@@ -63,17 +64,24 @@ export function EndpointProvider({ children }: { children: ReactNode }) {
     () => getRpcProxyUrl(endpointType),
     [endpointType],
   );
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     setTag("solana_network", endpointType);
   }, [endpointType]);
 
   const setEndpoint = (type: RPCEndpoint) => {
-    setEndpointType(type);
+    if (type !== endpointType) {
+      // Query keys for some values derived from multiple RPC sources do not carry the endpoint.
+      // Clear the cache before switching so none can survive into the next cluster.
+      queryClient.removeQueries();
+      setEndpointType(type);
+    }
     localStorage.setItem(STORAGE_KEY, type);
   };
 
   const resetToDefault = () => {
+    if (endpointType !== DEFAULT_TYPE) queryClient.removeQueries();
     setEndpointType(DEFAULT_TYPE);
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(LEGACY_STORAGE_KEY);
