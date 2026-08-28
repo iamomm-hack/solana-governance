@@ -48,6 +48,10 @@ const ALLOWED_PROGRAM_IDS = new Set([
   "ncnwF8AgynRcdEnGLcprSQNaKvgSMTgk3yPRc8cf9Zf",
   "Stake11111111111111111111111111111111111111",
 ]);
+const STAKE_PROGRAM_ID = "Stake11111111111111111111111111111111111111";
+const STAKE_ACCOUNT_DATA_SIZE = 200;
+const STAKE_ACCOUNT_MEMCMP_OFFSETS = new Set([44, 124]);
+const BASE58_PUBLIC_KEY = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 
 const CACHE_POLICIES: Partial<Record<AllowedRpcMethod, RpcCachePolicy>> = {
   getAccountInfo: { stale: 1, revalidate: 2, expire: 10 },
@@ -123,6 +127,52 @@ function validateMethodParams(
       const filters = config.filters;
       if (Array.isArray(filters) && filters.length > 8) {
         throw new RpcRequestError("Too many account filters", -32602, 400);
+      }
+    }
+
+    if (programId === STAKE_PROGRAM_ID) {
+      const filters =
+        config && !Array.isArray(config) && typeof config === "object"
+          ? config.filters
+          : undefined;
+      const hasDataSizeFilter =
+        Array.isArray(filters) &&
+        filters.some(
+          (filter) =>
+            filter !== null &&
+            !Array.isArray(filter) &&
+            typeof filter === "object" &&
+            filter.dataSize === STAKE_ACCOUNT_DATA_SIZE,
+        );
+      const hasRecognizedMemcmpFilter =
+        Array.isArray(filters) &&
+        filters.some((filter) => {
+          if (
+            filter === null ||
+            Array.isArray(filter) ||
+            typeof filter !== "object"
+          ) {
+            return false;
+          }
+
+          const memcmp = filter.memcmp;
+          return (
+            memcmp !== null &&
+            !Array.isArray(memcmp) &&
+            typeof memcmp === "object" &&
+            typeof memcmp.offset === "number" &&
+            STAKE_ACCOUNT_MEMCMP_OFFSETS.has(memcmp.offset) &&
+            typeof memcmp.bytes === "string" &&
+            BASE58_PUBLIC_KEY.test(memcmp.bytes)
+          );
+        });
+
+      if (!hasDataSizeFilter || !hasRecognizedMemcmpFilter) {
+        throw new RpcRequestError(
+          "Stake account scans require data-size and recognized public-key filters",
+          -32602,
+          400,
+        );
       }
     }
   }
