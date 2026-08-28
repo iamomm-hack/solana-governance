@@ -26,6 +26,7 @@ import {
   getMetaMerkleProofPda,
   computeProofCloseTimestamp,
   signTransactionForWallet,
+  confirmTransactionByPolling,
 } from "./helpers";
 import { BN } from "@coral-xyz/anchor";
 
@@ -172,11 +173,10 @@ export async function modifyVoteOverride(
         signedInitTransaction.serialize(),
         { preflightCommitment: "confirmed" }
       );
-    const initConfirmation =
-      await program.provider.connection.confirmTransaction(
-        { signature: initSignature, ...initBlockhash },
-        "confirmed"
-      );
+    const initConfirmation = await confirmTransactionByPolling(
+      program.provider.connection,
+      initSignature
+    );
 
     if (initConfirmation.value.err) {
       throw new Error(

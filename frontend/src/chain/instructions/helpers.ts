@@ -1,4 +1,10 @@
-import { PublicKey, Connection, Keypair, Transaction } from "@solana/web3.js";
+import {
+  PublicKey,
+  Connection,
+  Keypair,
+  Transaction,
+  type SignatureResult,
+} from "@solana/web3.js";
 import { AnchorProvider, Program, BN } from "@coral-xyz/anchor";
 import idl from "@/chain/idl/svmgov_program.json";
 import govV1Idl from "@/chain/idl/gov-v1.json";
@@ -11,12 +17,50 @@ import {
 } from "./types";
 import { AnchorWallet } from "@solana/wallet-adapter-react";
 import { SvmgovProgram, GovV1 } from "../types";
-import { RPC_URLS } from "@/contexts/EndpointContext";
+import { getRpcProxyUrl } from "@/lib/getRpcProxyUrl";
 import { DEFAULT_NCN_API_URL, fetchNcnJson } from "@/lib/ncnApi";
 
 /** Thrown when the wallet cannot provide the signature required by a transaction. */
 export class WalletSigningError extends Error {
   name = "WalletSigningError";
+}
+
+const CONFIRMATION_POLL_INTERVAL_MS = 1_000;
+const CONFIRMATION_TIMEOUT_MS = 60_000;
+
+/**
+ * Confirms a recently submitted transaction using HTTP JSON-RPC polling.
+ *
+ * web3.js `confirmTransaction` opens a WebSocket connection derived from the
+ * HTTP endpoint. The app's RPC proxy intentionally exposes only HTTP, so poll
+ * `getSignatureStatuses` instead.
+ */
+export async function confirmTransactionByPolling(
+  connection: Connection,
+  signature: string,
+): Promise<{ value: SignatureResult }> {
+  const deadline = Date.now() + CONFIRMATION_TIMEOUT_MS;
+
+  while (Date.now() < deadline) {
+    const response = await connection.getSignatureStatuses([signature]);
+    const status = response.value[0];
+    if (status) {
+      if (status.err) return { value: { err: status.err } };
+      if (
+        status.confirmationStatus === "confirmed" ||
+        status.confirmationStatus === "finalized" ||
+        status.confirmations === null
+      ) {
+        return { value: { err: null } };
+      }
+    }
+
+    await new Promise((resolve) =>
+      setTimeout(resolve, CONFIRMATION_POLL_INTERVAL_MS),
+    );
+  }
+
+  throw new Error(`Timed out confirming transaction ${signature}`);
 }
 
 /**
@@ -163,7 +207,7 @@ export function createProgramWithWallet(
   endpoint?: string
 ) {
   // Use provided endpoint or default to devnet
-  const rpcEndpoint = endpoint || RPC_URLS.testnet;
+  const rpcEndpoint = endpoint || getRpcProxyUrl("testnet");
   const connection = new Connection(rpcEndpoint, "confirmed");
 
   const provider = new AnchorProvider(connection, wallet, {
@@ -181,7 +225,7 @@ export function createGovV1ProgramWithWallet(
   endpoint?: string
 ) {
   // Use provided endpoint or default to devnet
-  const rpcEndpoint = endpoint || RPC_URLS.testnet;
+  const rpcEndpoint = endpoint || getRpcProxyUrl("testnet");
   const connection = new Connection(rpcEndpoint, "confirmed");
 
   const provider = new AnchorProvider(connection, wallet, {
@@ -196,7 +240,7 @@ export function createGovV1ProgramWithWallet(
 // Create program instance with dummy wallet (just for data fetching)
 export function createProgramWitDummyWallet(endpoint?: string) {
   // Use provided endpoint or default to devnet
-  const rpcEndpoint = endpoint || RPC_URLS.testnet;
+  const rpcEndpoint = endpoint || getRpcProxyUrl("testnet");
   const connection = new Connection(rpcEndpoint, "confirmed");
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

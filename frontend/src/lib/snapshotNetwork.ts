@@ -1,7 +1,6 @@
-import { Connection } from "@solana/web3.js";
 import type { RPCEndpoint } from "@/types";
 
-export type KnownSnapshotNetwork = Exclude<RPCEndpoint, "custom">;
+export type KnownSnapshotNetwork = RPCEndpoint;
 
 /**
  * Shown when an action needs the snapshot service but the RPC is not a known cluster.
@@ -33,27 +32,6 @@ export function networkFromGenesisHash(
   return (Object.keys(CLUSTER_GENESIS_HASHES) as KnownSnapshotNetwork[]).find(
     (network) => CLUSTER_GENESIS_HASHES[network] === genesisHash,
   );
-}
-
-async function fetchGenesisHash(endpointUrl: string): Promise<string> {
-  const connection = new Connection(endpointUrl, "confirmed");
-  return connection.getGenesisHash();
-}
-
-/**
- * NCN proof fetches require a known network (mainnet/testnet/devnet). Preset endpoints
- * already have one. A custom RPC is identified via `getGenesisHash`; unknown clusters
- * cannot be routed to the snapshot service.
- */
-export async function resolveSnapshotNetwork(
-  endpointType: RPCEndpoint,
-  endpointUrl: string,
-): Promise<KnownSnapshotNetwork | undefined> {
-  if (endpointType !== "custom") {
-    return endpointType;
-  }
-
-  return networkFromGenesisHash(await fetchGenesisHash(endpointUrl));
 }
 
 export function requireKnownSnapshotNetwork(

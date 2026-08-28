@@ -24,6 +24,7 @@ const mockGetMetaMerkleProofPda = jest.fn();
 const mockDeriveVotePda = jest.fn();
 const mockDeriveVoteOverridePda = jest.fn();
 const mockDeriveVoteOverrideCachePda = jest.fn();
+const mockConfirmTransactionByPolling = jest.fn();
 
 jest.mock("../helpers", () => {
   const actual = jest.requireActual("../helpers");
@@ -46,6 +47,8 @@ jest.mock("../helpers", () => {
       mockDeriveVoteOverridePda(...args),
     deriveVoteOverrideCachePda: (...args: unknown[]) =>
       mockDeriveVoteOverrideCachePda(...args),
+    confirmTransactionByPolling: (...args: unknown[]) =>
+      mockConfirmTransactionByPolling(...args),
   };
 });
 
@@ -85,7 +88,6 @@ describe("castVoteOverride", () => {
   const mockGetAccountInfo = jest.fn();
   const mockGetLatestBlockhash = jest.fn();
   const mockSendRawTransaction = jest.fn();
-  const mockConfirmTransaction = jest.fn();
 
   function buildFakeProgram() {
     recordedAccounts = {};
@@ -108,7 +110,6 @@ describe("castVoteOverride", () => {
           getAccountInfo: mockGetAccountInfo,
           getLatestBlockhash: mockGetLatestBlockhash,
           sendRawTransaction: mockSendRawTransaction,
-          confirmTransaction: mockConfirmTransaction,
         },
       },
       account: {
@@ -168,7 +169,7 @@ describe("castVoteOverride", () => {
       lastValidBlockHeight: 123,
     });
     mockSendRawTransaction.mockResolvedValue("test-signature");
-    mockConfirmTransaction.mockResolvedValue({ value: { err: null } });
+    mockConfirmTransactionByPolling.mockResolvedValue({ value: { err: null } });
     mockGetMetaMerkleProofPda.mockReturnValue(META_MERKLE_PROOF_PDA);
     mockDeriveVotePda.mockReturnValue(VALIDATOR_VOTE_PDA);
     mockDeriveVoteOverridePda.mockReturnValue(VOTE_OVERRIDE_PDA);
@@ -348,15 +349,11 @@ describe("castVoteOverride", () => {
     expect(initTransaction.instructions[0]).not.toBe(
       voteTransaction.instructions[0]
     );
-    expect(mockConfirmTransaction).toHaveBeenCalledWith(
-      {
-        signature: "init-signature",
-        blockhash: BLOCKHASH,
-        lastValidBlockHeight: 123,
-      },
-      "confirmed"
+    expect(mockConfirmTransactionByPolling).toHaveBeenCalledWith(
+      expect.any(Object),
+      "init-signature"
     );
-    expect(mockConfirmTransaction.mock.invocationCallOrder[0]).toBeLessThan(
+    expect(mockConfirmTransactionByPolling.mock.invocationCallOrder[0]).toBeLessThan(
       mockSignTransaction.mock.invocationCallOrder[1]
     );
   });
@@ -364,7 +361,7 @@ describe("castVoteOverride", () => {
   it("does not submit the vote when proof initialization fails", async () => {
     mockGetAccountInfo.mockResolvedValue(null);
     mockSendRawTransaction.mockResolvedValue("init-signature");
-    mockConfirmTransaction.mockResolvedValue({
+    mockConfirmTransactionByPolling.mockResolvedValue({
       value: { err: { InstructionError: [0, "Custom"] } },
     });
 
