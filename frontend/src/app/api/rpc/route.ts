@@ -1,9 +1,6 @@
 import { cacheLife, cacheTag, revalidateTag } from "next/cache";
 import { NextResponse, type NextRequest } from "next/server";
-import {
-  getRpcUrlForEndpoint,
-  type RpcEnvSource,
-} from "@/lib/getRpcUrls";
+import { getRpcUrlForEndpoint, type RpcEnvSource } from "@/lib/getRpcUrls";
 import {
   getRpcCachePolicy,
   isRpcCluster,
@@ -21,6 +18,10 @@ const MAX_REQUEST_BYTES = 64 * 1024;
 const UPSTREAM_TIMEOUT_MS = 15_000;
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const MAX_RATE_LIMIT_BUCKETS = 10_000;
+const WRITE_BUCKET_KEY = "write";
+const READ_BUCKET_KEY = "read";
+const WRITE_LIMIT = 30;
+const READ_LIMIT = 240;
 
 interface RateLimitEntry {
   count: number;
@@ -40,8 +41,7 @@ class RpcUpstreamError extends Error {
   }
 }
 
-// This is a per-instance safety net. Production deployments should also enforce
-// distributed rate limits at the CDN/WAF layer.
+// Per {ip:bucket} rate limits, where bucket is read/write request
 const rateLimits = new Map<string, RateLimitEntry>();
 
 function takeRateLimitToken(
@@ -50,8 +50,9 @@ function takeRateLimitToken(
 ): boolean {
   const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0];
   const ip = forwarded?.trim() || request.headers.get("x-real-ip") || "unknown";
-  const bucket = isWriteRpcMethod(method) ? "write" : "read";
-  const limit = bucket === "write" ? 30 : 240;
+  const [bucket, limit] = isWriteRpcMethod(method)
+    ? [WRITE_BUCKET_KEY, WRITE_LIMIT]
+    : [READ_BUCKET_KEY, READ_LIMIT];
   const key = `${ip}:${bucket}`;
   const now = Date.now();
   const existing = rateLimits.get(key);
@@ -71,11 +72,7 @@ function takeRateLimitToken(
   return true;
 }
 
-function jsonRpcError(
-  id: JsonRpcId,
-  error: UpstreamError,
-  status = 200,
-) {
+function jsonRpcError(id: JsonRpcId, error: UpstreamError, status = 200) {
   return NextResponse.json(
     { jsonrpc: "2.0", id, error },
     { status, headers: { "Cache-Control": "no-store" } },
