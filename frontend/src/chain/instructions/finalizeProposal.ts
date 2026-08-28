@@ -1,17 +1,21 @@
-import { PublicKey } from "@solana/web3.js";
+import { PublicKey, Transaction } from "@solana/web3.js";
 import {
   BlockchainParams,
   FinalizeProposalParams,
   TransactionResult,
 } from "./types";
-import { createProgramWithWallet } from "./helpers";
+import {
+  confirmTransactionByPolling,
+  createProgramWithWallet,
+  signTransactionForWallet,
+} from "./helpers";
 
 /**
  * Finalizes a governance proposal
  */
 export async function finalizeProposal(
   params: FinalizeProposalParams,
-  blockchainParams: BlockchainParams
+  blockchainParams: BlockchainParams,
 ): Promise<TransactionResult> {
   try {
     const { proposalId, wallet } = params;
@@ -22,18 +26,43 @@ export async function finalizeProposal(
 
     const proposalPubkey = new PublicKey(proposalId);
     const program = createProgramWithWallet(wallet, blockchainParams.endpoint);
+    const signer = wallet.publicKey;
 
-    // Build and send transaction
-    const tx = await program.methods
+    const finalizeInstruction = await program.methods
       .finalizeProposal()
       .accounts({
-        signer: wallet.publicKey,
+        signer,
         proposal: proposalPubkey,
       })
-      .rpc();
+      .instruction();
+
+    const transaction = new Transaction().add(finalizeInstruction);
+    transaction.feePayer = signer;
+    transaction.recentBlockhash = (
+      await program.provider.connection.getLatestBlockhash("confirmed")
+    ).blockhash;
+
+    const signedTransaction = await signTransactionForWallet(
+      wallet,
+      transaction,
+      signer,
+    );
+    const signature = await program.provider.connection.sendRawTransaction(
+      signedTransaction.serialize(),
+      { preflightCommitment: "confirmed" },
+    );
+    const confirmation = await confirmTransactionByPolling(
+      program.provider.connection,
+      signature,
+    );
+    if (confirmation.value.err) {
+      throw new Error(
+        `Failed to finalize proposal: ${JSON.stringify(confirmation.value.err)}`,
+      );
+    }
 
     return {
-      signature: tx,
+      signature,
       success: true,
     };
   } catch (error) {
