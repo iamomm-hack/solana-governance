@@ -9,7 +9,7 @@ import { useChainVoteAccount } from "./useChainVoteAccount";
 const SNAPSHOT_SLOT_UNSET_MESSAGE = "No snapshot slot has been set yet";
 
 export function useSupportProposal(userPubKey: string | undefined) {
-  const { endpointUrl: endpoint, endpointType } = useEndpoint();
+  const { endpointUrl: endpoint, network } = useEndpoint();
   const governanceConfigQuery = useGovernanceConfigContext();
   const { data: meta } = useSnapshotMeta();
   const { data: chainVoteAccount } = useChainVoteAccount(userPubKey);
@@ -32,7 +32,7 @@ export function useSupportProposal(userPubKey: string | undefined) {
         params,
         {
           endpoint,
-          network: endpointType,
+          network,
         },
         meta.slot,
         chainVoteAccount || undefined,

@@ -5,14 +5,14 @@ import { fetchNcnJson } from "@/lib/ncnApi";
 import { useQuery } from "@tanstack/react-query";
 
 export const useSnapshotMeta = () => {
-  const { endpointType } = useEndpoint();
+  const { network } = useEndpoint();
   const { ncnApiUrl } = useNcnApi();
 
   return useQuery({
     staleTime: 1000 * 120, // 2 minutes
-    queryKey: ["snapshot_meta", endpointType, ncnApiUrl],
+    queryKey: ["snapshot_meta", network, ncnApiUrl],
     queryFn: ({ signal }): Promise<NetworkMetaResponse> => {
-      const url = `${ncnApiUrl}/meta?network=${endpointType}`;
+      const url = `${ncnApiUrl}/meta?network=${network}`;
 
       return fetchNcnJson<NetworkMetaResponse>(url, {
         signal,

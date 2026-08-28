@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useSnapshotMeta } from "./useSnapshotMeta";
 
 export const useVoterWalletSummary = (userPubKey: string | undefined) => {
-  const { endpointType } = useEndpoint();
+  const { network } = useEndpoint();
   const { ncnApiUrl } = useNcnApi();
   const { data: meta } = useSnapshotMeta();
   const slot = meta?.slot;
@@ -13,20 +13,14 @@ export const useVoterWalletSummary = (userPubKey: string | undefined) => {
   return useQuery({
     staleTime: 1000 * 120, // 2 minutes
     enabled: slot !== undefined && !!userPubKey,
-    queryKey: [
-      "vote_wallet_summary",
-      endpointType,
-      userPubKey,
-      ncnApiUrl,
-      slot,
-    ],
+    queryKey: ["vote_wallet_summary", network, userPubKey, ncnApiUrl, slot],
     queryFn: ({ signal }) => {
       if (slot === undefined) {
         throw new Error("Snapshot slot not loaded");
       }
 
       return getVoterWalletSummary(
-        endpointType,
+        network,
         userPubKey,
         slot,
         ncnApiUrl,

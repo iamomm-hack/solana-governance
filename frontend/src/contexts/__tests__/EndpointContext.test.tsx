@@ -28,7 +28,7 @@ describe("EndpointProvider", () => {
     const { wrapper } = createWrapper();
     const { result } = renderHook(() => useEndpoint(), { wrapper });
 
-    expect(result.current.endpointType).toBe("mainnet");
+    expect(result.current.network).toBe("mainnet");
     expect(result.current.endpointUrl).toBe(
       "http://localhost/api/rpc?cluster=mainnet",
     );
@@ -40,7 +40,7 @@ describe("EndpointProvider", () => {
 
     act(() => result.current.setEndpoint("devnet"));
 
-    expect(result.current.endpointType).toBe("devnet");
+    expect(result.current.network).toBe("devnet");
     expect(result.current.endpointUrl).toBe(
       "http://localhost/api/rpc?cluster=devnet",
     );
@@ -69,7 +69,7 @@ describe("EndpointProvider", () => {
     queryClient.setQueryData(["validatorsVoterSplits"], { devnet: true });
     act(() => result.current.resetToDefault());
     expect(queryClient.getQueryData(["validatorsVoterSplits"])).toBeUndefined();
-    expect(result.current.endpointType).toBe("mainnet");
+    expect(result.current.network).toBe("mainnet");
   });
 
   it("migrates the cluster from legacy storage and discards its URL", () => {
@@ -84,7 +84,7 @@ describe("EndpointProvider", () => {
     const { wrapper } = createWrapper();
     const { result } = renderHook(() => useEndpoint(), { wrapper });
 
-    expect(result.current.endpointType).toBe("testnet");
+    expect(result.current.network).toBe("testnet");
     expect(result.current.endpointUrl).toBe(
       "http://localhost/api/rpc?cluster=testnet",
     );
@@ -100,7 +100,7 @@ describe("EndpointProvider", () => {
     const { wrapper } = createWrapper();
     const { result } = renderHook(() => useEndpoint(), { wrapper });
 
-    expect(result.current.endpointType).toBe("mainnet");
+    expect(result.current.network).toBe("mainnet");
     expect(localStorage.getItem(LEGACY_STORAGE_KEY)).toBeNull();
   });
 });

@@ -10,12 +10,12 @@ const GOVERNANCE_CONFIG_STALE_MS = 60 * 60 * 1000; // 1 hour (matches API revali
  * Cached per rpc endpoint for 1 hour. Safe to use in any client component within EndpointProvider.
  */
 export function useGovernanceConfig() {
-  const { endpointType } = useEndpoint();
+  const { network } = useEndpoint();
 
   return useQuery<GovernanceConfigDto>({
-    queryKey: [GET_GOVERNANCE_CONFIG, endpointType],
+    queryKey: [GET_GOVERNANCE_CONFIG, network],
     queryFn: async ({ signal }) => {
-      const params = new URLSearchParams({ endpoint: endpointType });
+      const params = new URLSearchParams({ endpoint: network });
       const res = await fetch(`/api/governance/config?${params.toString()}`, {
         signal,
       });

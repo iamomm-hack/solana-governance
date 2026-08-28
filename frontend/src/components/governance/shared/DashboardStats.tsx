@@ -31,7 +31,7 @@ export function DashboardStats({
   currentView,
   isLoading: isLoadingProps,
 }: DashboardStatsProps) {
-  const { endpointType } = useEndpoint();
+  const { network } = useEndpoint();
   const {
     data: snapshotMeta,
     isLoading: isLoadingSnapshotMeta,
@@ -75,8 +75,8 @@ export function DashboardStats({
       ? [
           {
             label: "Network",
-            value: endpointType,
-            mobileValue: endpointType,
+            value: network,
+            mobileValue: network,
             showRaw: false,
             isLoading: false,
           },
@@ -101,8 +101,8 @@ export function DashboardStats({
       : [
           {
             label: "Network",
-            value: endpointType,
-            mobileValue: endpointType,
+            value: network,
+            mobileValue: network,
             showRaw: false,
             isLoading: false,
           },

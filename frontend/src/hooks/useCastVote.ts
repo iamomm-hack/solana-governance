@@ -6,7 +6,7 @@ import { useMutation } from "@tanstack/react-query";
 import { track } from "@vercel/analytics";
 
 export function useCastVote() {
-  const { endpointUrl: endpoint, endpointType } = useEndpoint();
+  const { endpointUrl: endpoint, network } = useEndpoint();
   const { ncnApiUrl } = useNcnApi();
 
   return useMutation({
@@ -14,7 +14,7 @@ export function useCastVote() {
     mutationFn: (params: CastVoteParams) =>
       castVoteMutation(params, {
         endpoint,
-        network: endpointType,
+        network,
         ncnApiUrl,
       }),
     onMutate: (params) => {

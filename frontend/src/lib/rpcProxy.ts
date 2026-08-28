@@ -1,4 +1,4 @@
-import type { RPCEndpoint } from "@/types";
+import type { RpcNetwork } from "@/types";
 
 export const RPC_CLUSTERS = ["mainnet", "testnet", "devnet"] as const;
 
@@ -19,12 +19,7 @@ export const RPC_METHODS = [
 export type AllowedRpcMethod = (typeof RPC_METHODS)[number];
 export type JsonRpcId = string | number | null;
 export type JsonValue =
-  | null
-  | boolean
-  | number
-  | string
-  | JsonValue[]
-  | { [key: string]: JsonValue };
+  null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 
 export interface JsonRpcRequest {
   jsonrpc: "2.0";
@@ -75,7 +70,7 @@ export class RpcRequestError extends Error {
   }
 }
 
-export function isRpcCluster(value: string | null): value is RPCEndpoint {
+export function isRpcCluster(value: string | null): value is RpcNetwork {
   return value !== null && CLUSTER_SET.has(value);
 }
 

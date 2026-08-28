@@ -3,7 +3,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { fetchGovernanceConfigFromChain } from "@/lib/getGovernanceConfig";
 import { getRpcUrlForEndpoint, type RpcEnvSource } from "@/lib/getRpcUrls";
-import type { RPCEndpoint } from "@/types";
+import type { RpcNetwork } from "@/types";
 
 const REVALIDATE_SECONDS = 3600; // 1 hour
 
@@ -11,7 +11,7 @@ const governanceConfigQuerySchema = z.object({
   endpoint: z.enum(["mainnet", "testnet", "devnet"]).default("mainnet"),
 });
 
-async function getCachedGovernanceConfig(endpoint: RPCEndpoint) {
+async function getCachedGovernanceConfig(endpoint: RpcNetwork) {
   // Remote: in-memory cache doesn't persist across serverless requests; remote gives shared cache and fewer RPC hits.
   // Cache key includes endpoint so mainnet/testnet/devnet have separate entries.
   "use cache: remote";

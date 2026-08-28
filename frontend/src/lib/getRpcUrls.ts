@@ -1,11 +1,8 @@
 import "server-only";
-import type { RPCEndpoint } from "@/types";
+import type { RpcNetwork } from "@/types";
 
 /** Default RPC URLs when env vars are not set. Single source of truth for mainnet/testnet/devnet. */
-export const DEFAULT_RPC_URLS: Record<
-  RPCEndpoint,
-  string
-> = {
+export const DEFAULT_RPC_URLS: Record<RpcNetwork, string> = {
   mainnet: "https://api.mainnet-beta.solana.com",
   testnet: "https://api.testnet.solana.com",
   devnet: "https://api.devnet.solana.com",
@@ -22,7 +19,7 @@ export interface RpcEnvSource {
  */
 export function getRpcUrls(
   envSource: RpcEnvSource = {},
-): Record<RPCEndpoint, string> {
+): Record<RpcNetwork, string> {
   return {
     mainnet: envSource.SOLANA_RPC_MAINNET ?? DEFAULT_RPC_URLS.mainnet,
     testnet: envSource.SOLANA_RPC_TESTNET ?? DEFAULT_RPC_URLS.testnet,
@@ -34,14 +31,12 @@ export function getRpcUrls(
  * Resolves the server-side upstream RPC URL for a supported cluster.
  */
 export function getRpcUrlForEndpoint(
-  endpoint: RPCEndpoint,
+  endpoint: RpcNetwork,
   envSource?: RpcEnvSource,
 ): string {
   const urls = getRpcUrls(
     envSource ??
-      (typeof process !== "undefined"
-        ? (process.env as RpcEnvSource)
-        : {}),
+      (typeof process !== "undefined" ? (process.env as RpcEnvSource) : {}),
   );
   return urls[endpoint];
 }

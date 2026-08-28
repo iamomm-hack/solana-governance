@@ -12,7 +12,7 @@ import {
   type JsonValue,
   type RpcCachePolicy,
 } from "@/lib/rpcProxy";
-import type { RPCEndpoint } from "@/types";
+import type { RpcNetwork } from "@/types";
 
 const MAX_REQUEST_BYTES = 64 * 1024;
 const UPSTREAM_TIMEOUT_MS = 15_000;
@@ -80,7 +80,7 @@ function jsonRpcError(id: JsonRpcId, error: UpstreamError, status = 200) {
 }
 
 async function callUpstream(
-  cluster: RPCEndpoint,
+  cluster: RpcNetwork,
   method: AllowedRpcMethod,
   params: JsonValue[],
 ): Promise<JsonValue> {
@@ -107,7 +107,7 @@ async function callUpstream(
 }
 
 async function callCachedUpstream(
-  cluster: RPCEndpoint,
+  cluster: RpcNetwork,
   method: AllowedRpcMethod,
   params: JsonValue[],
   policy: RpcCachePolicy,
