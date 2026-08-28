@@ -7,10 +7,10 @@ import type { RpcNetwork } from "@/types";
  * the server. Browser query and mutation functions resolve against the real
  * window origin before issuing RPC requests.
  */
-export function getRpcProxyUrl(endpoint: RpcNetwork): string {
+export function getRpcProxyUrl(network: RpcNetwork): string {
   const origin =
     typeof window === "undefined" ? "http://localhost" : window.location.origin;
   const url = new URL("/api/rpc", origin);
-  url.searchParams.set("cluster", endpoint);
+  url.searchParams.set("cluster", network);
   return url.toString();
 }
