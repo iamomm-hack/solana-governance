@@ -7,10 +7,14 @@ jest.mock("@/contexts/EndpointContext", () => ({
 }));
 
 import { BN } from "@coral-xyz/anchor";
-import { PublicKey } from "@solana/web3.js";
+import {
+  PublicKey,
+  TransactionExpiredBlockheightExceededError,
+} from "@solana/web3.js";
 
 import {
   assertOverrideProofLineage,
+  confirmTransactionByPolling,
   computeProofCloseTimestamp,
   resolveProposalSnapshotSlot,
   resolveSnapshotVoteAccount,
@@ -19,6 +23,54 @@ import type {
   StakeAccountProofResponse,
   VoteAccountProofResponse,
 } from "../types";
+
+describe("confirmTransactionByPolling", () => {
+  it("returns after an HTTP status reaches confirmed", async () => {
+    const getSignatureStatuses = jest.fn().mockResolvedValue({
+      value: [
+        {
+          confirmationStatus: "confirmed",
+          confirmations: 1,
+          err: null,
+          slot: 123,
+        },
+      ],
+    });
+    const connection = { getSignatureStatuses } as unknown as Connection;
+
+    await expect(
+      confirmTransactionByPolling(connection, "signature", 123),
+    ).resolves.toEqual({ value: { err: null } });
+    expect(getSignatureStatuses).toHaveBeenCalledWith(["signature"]);
+  });
+
+  it("returns the transaction error from status polling", async () => {
+    const err = { InstructionError: [0, "Custom"] };
+    const connection = {
+      getSignatureStatuses: jest.fn().mockResolvedValue({
+        value: [{ confirmationStatus: "confirmed", confirmations: 1, err }],
+      }),
+    } as unknown as Connection;
+
+    await expect(
+      confirmTransactionByPolling(connection, "signature", 123),
+    ).resolves.toEqual({ value: { err } });
+  });
+
+  it("stops polling only after the transaction's blockhash expires", async () => {
+    const getSignatureStatuses = jest.fn().mockResolvedValue({ value: [null] });
+    const getBlockHeight = jest.fn().mockResolvedValue(124);
+    const connection = {
+      getSignatureStatuses,
+      getBlockHeight,
+    } as unknown as Connection;
+
+    await expect(
+      confirmTransactionByPolling(connection, "signature", 123),
+    ).rejects.toBeInstanceOf(TransactionExpiredBlockheightExceededError);
+    expect(getBlockHeight).toHaveBeenCalledWith("confirmed");
+  });
+});
 
 /**
  * Builds a minimal Connection stand-in exposing only the two methods
