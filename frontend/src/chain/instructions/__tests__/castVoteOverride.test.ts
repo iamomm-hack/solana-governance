@@ -382,7 +382,7 @@ describe("castVoteOverride", () => {
     mockSendRawTransaction
       .mockResolvedValueOnce("losing-init-signature")
       .mockResolvedValueOnce("vote-signature");
-    mockConfirmTransaction.mockResolvedValue({
+    mockConfirmTransactionByPolling.mockResolvedValue({ 
       value: { err: { InstructionError: [0, "Custom"] } },
     });
 
